@@ -208,7 +208,19 @@ export function LogViewer({ output, className }: LogViewerProps) {
   };
 
   if (entries.length === 0) {
-    return null;
+    return (
+      <div className="flex items-center justify-center p-8 text-muted-foreground">
+        <div className="text-center">
+          <Info className="w-8 h-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">No log entries yet. Logs will appear here as the process runs.</p>
+          {output && output.trim() && (
+            <div className="mt-4 p-3 bg-zinc-900/50 rounded text-xs font-mono text-left max-h-40 overflow-auto">
+              <pre className="whitespace-pre-wrap">{output}</pre>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   // Count entries by type

@@ -393,10 +393,10 @@ export const KanbanCard = memo(function KanbanCard({
                 !isDescriptionExpanded && "line-clamp-3"
               )}
             >
-              {feature.description}
+              {feature.description || feature.summary || feature.title || feature.id}
             </CardTitle>
             {/* Show More/Less toggle - only show when description is likely truncated */}
-            {feature.description.length > 100 && (
+            {(feature.description || feature.summary || feature.title || "").length > 100 && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -427,7 +427,7 @@ export const KanbanCard = memo(function KanbanCard({
       </CardHeader>
       <CardContent className="p-3 pt-0">
         {/* Steps Preview - Show in Standard and Detailed modes */}
-        {showSteps && feature.steps.length > 0 && (
+        {showSteps && feature.steps && feature.steps.length > 0 && (
           <div className="mb-3 space-y-1">
             {feature.steps.slice(0, 3).map((step, index) => (
               <div
@@ -844,10 +844,13 @@ export const KanbanCard = memo(function KanbanCard({
               <Sparkles className="w-5 h-5 text-green-400" />
               Implementation Summary
             </DialogTitle>
-            <DialogDescription className="text-sm" title={feature.description}>
-              {feature.description.length > 100
-                ? `${feature.description.slice(0, 100)}...`
-                : feature.description}
+            <DialogDescription className="text-sm" title={feature.description || feature.summary || feature.title || ""}>
+              {(() => {
+                const displayText = feature.description || feature.summary || feature.title || "No description";
+                return displayText.length > 100
+                  ? `${displayText.slice(0, 100)}...`
+                  : displayText;
+              })()}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto p-4 bg-card rounded-lg border border-border">

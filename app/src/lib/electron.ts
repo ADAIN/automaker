@@ -1843,6 +1843,23 @@ function createMockSpecRegenerationAPI(): SpecRegenerationAPI {
       return { success: true };
     },
 
+    generateFeatures: async (projectPath: string) => {
+      if (mockSpecRegenerationRunning) {
+        return {
+          success: false,
+          error: "Feature generation is already running",
+        };
+      }
+
+      mockSpecRegenerationRunning = true;
+      console.log(`[Mock] Generating features from existing spec for: ${projectPath}`);
+
+      // Simulate async feature generation
+      simulateFeatureGeneration(projectPath);
+
+      return { success: true };
+    },
+
     stop: async () => {
       mockSpecRegenerationRunning = false;
       if (mockSpecRegenerationTimeout) {
@@ -2001,6 +2018,51 @@ async function simulateSpecRegeneration(
   emitSpecRegenerationEvent({
     type: "spec_regeneration_complete",
     message: "Spec regeneration complete!",
+  });
+
+  mockSpecRegenerationRunning = false;
+  mockSpecRegenerationTimeout = null;
+}
+
+async function simulateFeatureGeneration(projectPath: string) {
+  emitSpecRegenerationEvent({
+    type: "spec_regeneration_progress",
+    content: "[Phase: initialization] Starting feature generation from existing app_spec.txt...\n",
+  });
+
+  await new Promise((resolve) => {
+    mockSpecRegenerationTimeout = setTimeout(resolve, 500);
+  });
+  if (!mockSpecRegenerationRunning) return;
+
+  emitSpecRegenerationEvent({
+    type: "spec_regeneration_progress",
+    content: "[Phase: feature_generation] Reading implementation roadmap...\n",
+  });
+
+  await new Promise((resolve) => {
+    mockSpecRegenerationTimeout = setTimeout(resolve, 500);
+  });
+  if (!mockSpecRegenerationRunning) return;
+
+  emitSpecRegenerationEvent({
+    type: "spec_regeneration_progress",
+    content: "[Feature Creation] Creating features from roadmap...\n",
+  });
+
+  await new Promise((resolve) => {
+    mockSpecRegenerationTimeout = setTimeout(resolve, 1000);
+  });
+  if (!mockSpecRegenerationRunning) return;
+
+  emitSpecRegenerationEvent({
+    type: "spec_regeneration_progress",
+    content: "[Phase: complete] All tasks completed!\n",
+  });
+
+  emitSpecRegenerationEvent({
+    type: "spec_regeneration_complete",
+    message: "All tasks completed!",
   });
 
   mockSpecRegenerationRunning = false;

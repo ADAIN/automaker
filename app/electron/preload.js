@@ -285,6 +285,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
         projectDefinition,
       }),
 
+    // Generate features from existing app_spec.txt
+    generateFeatures: (projectPath) =>
+      ipcRenderer.invoke("spec-regeneration:generate-features", {
+        projectPath,
+      }),
+
     // Stop regenerating spec
     stop: () => ipcRenderer.invoke("spec-regeneration:stop"),
 

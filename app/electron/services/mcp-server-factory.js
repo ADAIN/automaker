@@ -28,18 +28,20 @@ class McpServerFactory {
           async (args) => {
             try {
               console.log(`[McpServerFactory] UpdateFeatureStatus tool called: featureId=${args.featureId}, status=${args.status}, summary=${args.summary || "(none)"}`);
+              console.log(`[Feature Creation] Creating/updating feature "${args.featureId}" with status "${args.status}"`);
 
               // Load the feature to check skipTests flag
               const features = await featureLoader.loadFeatures(projectPath);
               const feature = features.find((f) => f.id === args.featureId);
 
               if (!feature) {
-                throw new Error(`Feature ${args.featureId} not found`);
+                console.log(`[Feature Creation] Feature ${args.featureId} not found - this might be a new feature being created`);
+                // This might be a new feature - try to proceed anyway
               }
 
               // If agent tries to mark as verified but feature has skipTests=true, convert to waiting_approval
               let finalStatus = args.status;
-              if (args.status === "verified" && feature.skipTests === true) {
+              if (feature && args.status === "verified" && feature.skipTests === true) {
                 console.log(`[McpServerFactory] Feature ${args.featureId} has skipTests=true, converting verified -> waiting_approval`);
                 finalStatus = "waiting_approval";
               }
@@ -51,6 +53,8 @@ class McpServerFactory {
                 ? `Successfully updated feature ${args.featureId} to status "${finalStatus}" (converted from "${args.status}" because skipTests=true)${args.summary ? ` with summary: "${args.summary}"` : ""}`
                 : `Successfully updated feature ${args.featureId} to status "${finalStatus}"${args.summary ? ` with summary: "${args.summary}"` : ""}`;
 
+              console.log(`[Feature Creation] ✓ ${statusMessage}`);
+
               return {
                 content: [{
                   type: "text",
@@ -59,6 +63,7 @@ class McpServerFactory {
               };
             } catch (error) {
               console.error("[McpServerFactory] UpdateFeatureStatus tool error:", error);
+              console.error(`[Feature Creation] ✗ Failed to create/update feature ${args.featureId}: ${error.message}`);
               return {
                 content: [{
                   type: "text",

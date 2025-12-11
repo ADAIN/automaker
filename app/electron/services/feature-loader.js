@@ -170,14 +170,53 @@ class FeatureLoader {
         const featureJsonPath = this.getFeatureJsonPath(projectPath, featureId);
 
         try {
+          // Check if feature.json exists before trying to read it
+          try {
+            await fs.access(featureJsonPath);
+          } catch (accessError) {
+            // File doesn't exist - this is expected for incomplete feature directories
+            // Skip silently or log at debug level only
+            if (accessError.code !== "ENOENT") {
+              console.warn(
+                `[FeatureLoader] Cannot access feature.json for ${featureId}:`,
+                accessError.message
+              );
+            }
+            // Skip this directory - it doesn't have a valid feature.json
+            continue;
+          }
+
           const content = await fs.readFile(featureJsonPath, "utf-8");
           const feature = JSON.parse(content);
+          
+          // Validate that the feature has required fields
+          if (!feature.id) {
+            console.warn(
+              `[FeatureLoader] Feature ${featureId} missing required 'id' field, skipping`
+            );
+            continue;
+          }
+          
           features.push(feature);
         } catch (error) {
-          console.error(
-            `[FeatureLoader] Failed to load feature ${featureId}:`,
-            error
-          );
+          // Handle different error types appropriately
+          if (error.code === "ENOENT") {
+            // File was deleted between access check and read - skip silently
+            console.debug(
+              `[FeatureLoader] Feature ${featureId} was removed, skipping`
+            );
+          } else if (error instanceof SyntaxError) {
+            // JSON parse error - log as warning since file exists but is malformed
+            console.warn(
+              `[FeatureLoader] Failed to parse feature.json for ${featureId}: ${error.message}`
+            );
+          } else {
+            // Other errors - log as error
+            console.error(
+              `[FeatureLoader] Failed to load feature ${featureId}:`,
+              error.message || error
+            );
+          }
           // Continue loading other features
         }
       }
@@ -339,6 +378,7 @@ class FeatureLoader {
   /**
    * Update feature status (legacy API)
    * Features are stored in .automaker/features/{id}/feature.json
+   * Creates the feature if it doesn't exist.
    * @param {string} featureId - The ID of the feature to update
    * @param {string} status - The new status
    * @param {string} projectPath - Path to the project
@@ -346,16 +386,46 @@ class FeatureLoader {
    * @param {string} [error] - Optional error message if feature errored
    */
   async updateFeatureStatus(featureId, status, projectPath, summary, error) {
+    // Check if feature exists
+    const existingFeature = await this.get(projectPath, featureId);
+    
+    if (!existingFeature) {
+      // Feature doesn't exist - create it
+      console.log(`[FeatureLoader] Feature ${featureId} not found - creating new feature`);
+      const newFeature = {
+        id: featureId,
+        title: featureId.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+        description: summary || '', // Use summary as description for display
+        status: status,
+        summary: summary || '',
+        createdAt: new Date().toISOString(),
+      };
+      if (error !== undefined) {
+        newFeature.error = error;
+      }
+      await this.create(projectPath, newFeature);
+      console.log(
+        `[FeatureLoader] Created feature ${featureId}: status=${status}${
+          summary ? `, summary="${summary}"` : ""
+        }`
+      );
+      return;
+    }
+
+    // Feature exists - update it
     const updates = { status };
     if (summary !== undefined) {
       updates.summary = summary;
+      // Also update description if it's empty or not set
+      if (!existingFeature.description) {
+        updates.description = summary;
+      }
     }
     if (error !== undefined) {
       updates.error = error;
     } else {
       // Clear error if not provided
-      const feature = await this.get(projectPath, featureId);
-      if (feature && feature.error) {
+      if (existingFeature.error) {
         updates.error = undefined;
       }
     }

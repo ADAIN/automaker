@@ -72,9 +72,20 @@ function detectEntryType(content: string): LogEntryType {
     trimmed.startsWith("📋") ||
     trimmed.startsWith("⚡") ||
     trimmed.startsWith("✅") ||
-    trimmed.match(/^(Planning|Action|Verification)/i)
+    trimmed.match(/^(Planning|Action|Verification)/i) ||
+    trimmed.match(/\[Phase:\s*([^\]]+)\]/) ||
+    trimmed.match(/Phase:\s*\w+/i)
   ) {
     return "phase";
+  }
+  
+  // Feature creation events
+  if (
+    trimmed.match(/\[Feature Creation\]/i) ||
+    trimmed.match(/Feature Creation/i) ||
+    trimmed.match(/Creating feature/i)
+  ) {
+    return "success";
   }
 
   // Errors
@@ -138,6 +149,12 @@ function extractPhase(content: string): string | undefined {
   if (content.includes("⚡")) return "action";
   if (content.includes("✅")) return "verification";
 
+  // Extract from [Phase: ...] format
+  const phaseMatch = content.match(/\[Phase:\s*([^\]]+)\]/);
+  if (phaseMatch) {
+    return phaseMatch[1].toLowerCase();
+  }
+
   const match = content.match(/^(Planning|Action|Verification)/i);
   return match?.[1]?.toLowerCase();
 }
@@ -155,7 +172,14 @@ function generateTitle(type: LogEntryType, content: string): string {
       return "Tool Input/Result";
     case "phase": {
       const phase = extractPhase(content);
-      return phase ? `Phase: ${phase.charAt(0).toUpperCase() + phase.slice(1)}` : "Phase Change";
+      if (phase) {
+        // Capitalize first letter of each word
+        const formatted = phase.split(/\s+/).map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(" ");
+        return `Phase: ${formatted}`;
+      }
+      return "Phase Change";
     }
     case "error":
       return "Error";
@@ -224,6 +248,13 @@ export function parseLogOutput(rawOutput: string): LogEntry[] {
       trimmedLine.startsWith("❌") ||
       trimmedLine.startsWith("⚠️") ||
       trimmedLine.startsWith("🧠") ||
+      trimmedLine.match(/\[Phase:\s*([^\]]+)\]/) ||
+      trimmedLine.match(/\[Feature Creation\]/i) ||
+      trimmedLine.match(/\[Tool\]/i) ||
+      trimmedLine.match(/\[Agent\]/i) ||
+      trimmedLine.match(/\[Complete\]/i) ||
+      trimmedLine.match(/\[ERROR\]/i) ||
+      trimmedLine.match(/\[Status\]/i) ||
       trimmedLine.toLowerCase().includes("ultrathink preparation") ||
       trimmedLine.toLowerCase().includes("thinking level") ||
       (trimmedLine.startsWith("Input:") && currentEntry?.type === "tool_call");

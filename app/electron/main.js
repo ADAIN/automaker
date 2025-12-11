@@ -1235,6 +1235,62 @@ ipcMain.handle(
 );
 
 /**
+ * Generate features from existing app_spec.txt
+ * This allows users to generate features retroactively without regenerating the spec
+ */
+ipcMain.handle(
+  "spec-regeneration:generate-features",
+  async (_, { projectPath }) => {
+    try {
+      // Add project path to allowed paths
+      addAllowedPath(projectPath);
+
+      // Check if already running
+      if (specRegenerationExecution && specRegenerationExecution.isActive()) {
+        return { success: false, error: "Spec regeneration is already running" };
+      }
+
+      // Create execution context
+      specRegenerationExecution = {
+        abortController: null,
+        query: null,
+        isActive: () => specRegenerationExecution !== null,
+      };
+
+      const sendToRenderer = (data) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send("spec-regeneration:event", data);
+        }
+      };
+
+      // Start generating features (runs in background)
+      specRegenerationService
+        .generateFeaturesOnly(projectPath, sendToRenderer, specRegenerationExecution)
+        .catch((error) => {
+          console.error(
+            "[IPC] spec-regeneration:generate-features background error:",
+            error
+          );
+          sendToRenderer({
+            type: "spec_regeneration_error",
+            error: error.message,
+          });
+        })
+        .finally(() => {
+          specRegenerationExecution = null;
+        });
+
+      // Return immediately
+      return { success: true };
+    } catch (error) {
+      console.error("[IPC] spec-regeneration:generate-features error:", error);
+      specRegenerationExecution = null;
+      return { success: false, error: error.message };
+    }
+  }
+);
+
+/**
  * Merge feature worktree changes back to main branch
  */
 ipcMain.handle(
