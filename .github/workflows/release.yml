@@ -3,13 +3,13 @@ name: Build and Release Electron App
 on:
   push:
     tags:
-      - 'v*.*.*'  # Triggers on version tags like v1.0.0
-  workflow_dispatch:  # Allows manual triggering
+      - "v*.*.*" # Triggers on version tags like v1.0.0
+  workflow_dispatch: # Allows manual triggering
     inputs:
       version:
-        description: 'Version to release (e.g., v1.0.0)'
+        description: "Version to release (e.g., v1.0.0)"
         required: true
-        default: 'v0.1.0'
+        default: "v0.1.0"
 
 jobs:
   build-and-release:
@@ -36,31 +36,27 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: apps/app/package-lock.json
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: ./apps/app
         run: npm ci
 
       - name: Build Electron App (macOS)
         if: matrix.os == 'macos-latest'
-        working-directory: ./apps/app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build:electron -- --mac --x64 --arm64
 
       - name: Build Electron App (Windows)
         if: matrix.os == 'windows-latest'
-        working-directory: ./apps/app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build:electron -- --win --x64
 
       - name: Build Electron App (Linux)
         if: matrix.os == 'ubuntu-latest'
-        working-directory: ./apps/app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build:electron -- --linux --x64
