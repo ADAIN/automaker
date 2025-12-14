@@ -345,6 +345,7 @@ export function AnalysisView() {
       const techStack = detectTechStack();
 
       // Generate the spec content
+      // Note: Must follow XML format as defined in apps/server/src/lib/app-spec-format.ts
       const specContent = `<project_specification>
   <project_name>${projectName}</project_name>
 

@@ -428,6 +428,10 @@ export interface AppState {
 
   // Terminal state
   terminalState: TerminalState;
+
+  // Spec Creation State (per-project, keyed by project path)
+  // Tracks which project is currently having its spec generated
+  specCreatingForProject: string | null;
 }
 
 // Default background settings for board backgrounds
@@ -630,6 +634,10 @@ export interface AppActions {
     direction?: "horizontal" | "vertical"
   ) => void;
 
+  // Spec Creation actions
+  setSpecCreatingForProject: (projectPath: string | null) => void;
+  isSpecCreatingForProject: (projectPath: string) => boolean;
+
   // Reset
   reset: () => void;
 }
@@ -713,6 +721,7 @@ const initialState: AppState = {
     activeSessionId: null,
     defaultFontSize: 14,
   },
+  specCreatingForProject: null,
 };
 
 export const useAppStore = create<AppState & AppActions>()(
@@ -2078,6 +2087,15 @@ export const useAppStore = create<AppState & AppActions>()(
             activeSessionId: sessionId,
           },
         });
+      },
+
+      // Spec Creation actions
+      setSpecCreatingForProject: (projectPath) => {
+        set({ specCreatingForProject: projectPath });
+      },
+
+      isSpecCreatingForProject: (projectPath) => {
+        return get().specCreatingForProject === projectPath;
       },
 
       // Reset

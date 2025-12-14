@@ -1,11 +1,18 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  type ReactNode,
+} from "react";
 import { FileBrowserDialog } from "@/components/dialogs/file-browser-dialog";
 
 interface FileBrowserOptions {
   title?: string;
   description?: string;
+  initialPath?: string;
 }
 
 interface FileBrowserContextValue {
@@ -16,36 +23,47 @@ const FileBrowserContext = createContext<FileBrowserContextValue | null>(null);
 
 export function FileBrowserProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [resolver, setResolver] = useState<((value: string | null) => void) | null>(null);
+  const [resolver, setResolver] = useState<
+    ((value: string | null) => void) | null
+  >(null);
   const [dialogOptions, setDialogOptions] = useState<FileBrowserOptions>({});
 
-  const openFileBrowser = useCallback((options?: FileBrowserOptions): Promise<string | null> => {
-    return new Promise((resolve) => {
-      setDialogOptions(options || {});
-      setIsOpen(true);
-      setResolver(() => resolve);
-    });
-  }, []);
+  const openFileBrowser = useCallback(
+    (options?: FileBrowserOptions): Promise<string | null> => {
+      return new Promise((resolve) => {
+        setDialogOptions(options || {});
+        setIsOpen(true);
+        setResolver(() => resolve);
+      });
+    },
+    []
+  );
 
-  const handleSelect = useCallback((path: string) => {
-    if (resolver) {
-      resolver(path);
-      setResolver(null);
-    }
-    setIsOpen(false);
-    setDialogOptions({});
-  }, [resolver]);
-
-  const handleOpenChange = useCallback((open: boolean) => {
-    if (!open && resolver) {
-      resolver(null);
-      setResolver(null);
-    }
-    setIsOpen(open);
-    if (!open) {
+  const handleSelect = useCallback(
+    (path: string) => {
+      if (resolver) {
+        resolver(path);
+        setResolver(null);
+      }
+      setIsOpen(false);
       setDialogOptions({});
-    }
-  }, [resolver]);
+    },
+    [resolver]
+  );
+
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open && resolver) {
+        resolver(null);
+        setResolver(null);
+      }
+      setIsOpen(open);
+      if (!open) {
+        setDialogOptions({});
+      }
+    },
+    [resolver]
+  );
 
   return (
     <FileBrowserContext.Provider value={{ openFileBrowser }}>
@@ -56,6 +74,7 @@ export function FileBrowserProvider({ children }: { children: ReactNode }) {
         onSelect={handleSelect}
         title={dialogOptions.title}
         description={dialogOptions.description}
+        initialPath={dialogOptions.initialPath}
       />
     </FileBrowserContext.Provider>
   );
@@ -70,9 +89,13 @@ export function useFileBrowser() {
 }
 
 // Global reference for non-React code (like HttpApiClient)
-let globalFileBrowserFn: ((options?: FileBrowserOptions) => Promise<string | null>) | null = null;
+let globalFileBrowserFn:
+  | ((options?: FileBrowserOptions) => Promise<string | null>)
+  | null = null;
 
-export function setGlobalFileBrowser(fn: (options?: FileBrowserOptions) => Promise<string | null>) {
+export function setGlobalFileBrowser(
+  fn: (options?: FileBrowserOptions) => Promise<string | null>
+) {
   globalFileBrowserFn = fn;
 }
 

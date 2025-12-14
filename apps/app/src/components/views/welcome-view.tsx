@@ -255,6 +255,7 @@ export function WelcomeView() {
       }
 
       // Update the app_spec.txt with the project name
+      // Note: Must follow XML format as defined in apps/server/src/lib/app-spec-format.ts
       await api.writeFile(
         `${projectPath}/.automaker/app_spec.txt`,
         `<project_specification>
@@ -352,6 +353,7 @@ export function WelcomeView() {
       }
 
       // Update the app_spec.txt with template-specific info
+      // Note: Must follow XML format as defined in apps/server/src/lib/app-spec-format.ts
       await api.writeFile(
         `${projectPath}/.automaker/app_spec.txt`,
         `<project_specification>
@@ -456,6 +458,7 @@ export function WelcomeView() {
       }
 
       // Update the app_spec.txt with basic info
+      // Note: Must follow XML format as defined in apps/server/src/lib/app-spec-format.ts
       await api.writeFile(
         `${projectPath}/.automaker/app_spec.txt`,
         `<project_specification>

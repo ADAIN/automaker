@@ -248,6 +248,7 @@ export function InterviewView() {
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, "");
 
+    // Note: Must follow XML format as defined in apps/server/src/lib/app-spec-format.ts
     return `<project_specification>
   <project_name>${projectName || "my-project"}</project_name>
 

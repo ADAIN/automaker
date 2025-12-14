@@ -8,6 +8,7 @@
 
 import express from "express";
 import cors from "cors";
+import morgan from "morgan";
 import { WebSocketServer, WebSocket } from "ws";
 import { createServer } from "http";
 import dotenv from "dotenv";
@@ -46,6 +47,7 @@ dotenv.config();
 
 const PORT = parseInt(process.env.PORT || "3008", 10);
 const DATA_DIR = process.env.DATA_DIR || "./data";
+const ENABLE_REQUEST_LOGGING = process.env.ENABLE_REQUEST_LOGGING !== "false"; // Default to true
 
 // Check for required environment variables
 // Claude Agent SDK supports EITHER OAuth token (subscription) OR API key (pay-per-use)
@@ -83,6 +85,22 @@ initAllowedPaths();
 const app = express();
 
 // Middleware
+// Custom colored logger showing only endpoint and status code (configurable via ENABLE_REQUEST_LOGGING env var)
+if (ENABLE_REQUEST_LOGGING) {
+  morgan.token("status-colored", (req, res) => {
+    const status = res.statusCode;
+    if (status >= 500) return `\x1b[31m${status}\x1b[0m`; // Red for server errors
+    if (status >= 400) return `\x1b[33m${status}\x1b[0m`; // Yellow for client errors
+    if (status >= 300) return `\x1b[36m${status}\x1b[0m`; // Cyan for redirects
+    return `\x1b[32m${status}\x1b[0m`; // Green for success
+  });
+
+  app.use(
+    morgan(":method :url :status-colored", {
+      skip: (req) => req.url === "/api/health", // Skip health check logs
+    })
+  );
+}
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN || "*",

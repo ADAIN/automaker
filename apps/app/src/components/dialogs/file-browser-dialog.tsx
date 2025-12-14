@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FolderOpen, Folder, ChevronRight, Home, ArrowLeft, HardDrive } from "lucide-react";
+import {
+  FolderOpen,
+  Folder,
+  ChevronRight,
+  Home,
+  ArrowLeft,
+  HardDrive,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +31,7 @@ interface BrowseResult {
   directories: DirectoryEntry[];
   drives?: string[];
   error?: string;
+  warning?: string;
 }
 
 interface FileBrowserDialogProps {
@@ -32,6 +40,7 @@ interface FileBrowserDialogProps {
   onSelect: (path: string) => void;
   title?: string;
   description?: string;
+  initialPath?: string;
 }
 
 export function FileBrowserDialog({
@@ -40,6 +49,7 @@ export function FileBrowserDialog({
   onSelect,
   title = "Select Project Directory",
   description = "Navigate to your project folder",
+  initialPath,
 }: FileBrowserDialogProps) {
   const [currentPath, setCurrentPath] = useState<string>("");
   const [parentPath, setParentPath] = useState<string | null>(null);
@@ -47,14 +57,17 @@ export function FileBrowserDialog({
   const [drives, setDrives] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [warning, setWarning] = useState("");
 
   const browseDirectory = async (dirPath?: string) => {
     setLoading(true);
     setError("");
+    setWarning("");
 
     try {
       // Get server URL from environment or default
-      const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3008";
+      const serverUrl =
+        process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3008";
 
       const response = await fetch(`${serverUrl}/api/fs/browse`, {
         method: "POST",
@@ -69,22 +82,36 @@ export function FileBrowserDialog({
         setParentPath(result.parentPath);
         setDirectories(result.directories);
         setDrives(result.drives || []);
+        setWarning(result.warning || "");
       } else {
         setError(result.error || "Failed to browse directory");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load directories");
+      setError(
+        err instanceof Error ? err.message : "Failed to load directories"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Load home directory on mount
+  // Reset current path when dialog closes
   useEffect(() => {
-    if (open && !currentPath) {
-      browseDirectory();
+    if (!open) {
+      setCurrentPath("");
+      setParentPath(null);
+      setDirectories([]);
+      setError("");
+      setWarning("");
     }
   }, [open]);
+
+  // Load initial path or home directory when dialog opens
+  useEffect(() => {
+    if (open && !currentPath) {
+      browseDirectory(initialPath);
+    }
+  }, [open, initialPath]);
 
   const handleSelectDirectory = (dir: DirectoryEntry) => {
     browseDirectory(dir.path);
@@ -135,7 +162,9 @@ export function FileBrowserDialog({
               {drives.map((drive) => (
                 <Button
                   key={drive}
-                  variant={currentPath.startsWith(drive) ? "default" : "outline"}
+                  variant={
+                    currentPath.startsWith(drive) ? "default" : "outline"
+                  }
                   size="sm"
                   onClick={() => handleSelectDrive(drive)}
                   className="h-7 px-3 text-xs"
@@ -178,7 +207,9 @@ export function FileBrowserDialog({
           <div className="flex-1 overflow-y-auto border border-sidebar-border rounded-lg">
             {loading && (
               <div className="flex items-center justify-center h-full p-8">
-                <div className="text-sm text-muted-foreground">Loading directories...</div>
+                <div className="text-sm text-muted-foreground">
+                  Loading directories...
+                </div>
               </div>
             )}
 
@@ -188,9 +219,17 @@ export function FileBrowserDialog({
               </div>
             )}
 
-            {!loading && !error && directories.length === 0 && (
+            {warning && (
+              <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg mb-2">
+                <div className="text-sm text-yellow-500">{warning}</div>
+              </div>
+            )}
+
+            {!loading && !error && !warning && directories.length === 0 && (
               <div className="flex items-center justify-center h-full p-8">
-                <div className="text-sm text-muted-foreground">No subdirectories found</div>
+                <div className="text-sm text-muted-foreground">
+                  No subdirectories found
+                </div>
               </div>
             )}
 
@@ -212,7 +251,8 @@ export function FileBrowserDialog({
           </div>
 
           <div className="text-xs text-muted-foreground">
-            Click on a folder to navigate. Select the current folder or navigate to a subfolder.
+            Click on a folder to navigate. Select the current folder or navigate
+            to a subfolder.
           </div>
         </div>
 

@@ -133,10 +133,15 @@ export interface SuggestionsAPI {
 
 // Spec Regeneration types
 export type SpecRegenerationEvent =
-  | { type: "spec_regeneration_progress"; content: string }
-  | { type: "spec_regeneration_tool"; tool: string; input: unknown }
-  | { type: "spec_regeneration_complete"; message: string }
-  | { type: "spec_regeneration_error"; error: string };
+  | { type: "spec_regeneration_progress"; content: string; projectPath: string }
+  | {
+      type: "spec_regeneration_tool";
+      tool: string;
+      input: unknown;
+      projectPath: string;
+    }
+  | { type: "spec_regeneration_complete"; message: string; projectPath: string }
+  | { type: "spec_regeneration_error"; error: string; projectPath: string };
 
 export interface SpecRegenerationAPI {
   create: (
@@ -1923,6 +1928,7 @@ async function simulateSpecCreation(
   emitSpecRegenerationEvent({
     type: "spec_regeneration_progress",
     content: "[Phase: initialization] Starting project analysis...\n",
+    projectPath: projectPath,
   });
 
   await new Promise((resolve) => {
@@ -1935,6 +1941,7 @@ async function simulateSpecCreation(
     type: "spec_regeneration_tool",
     tool: "Glob",
     input: { pattern: "**/*.{json,ts,tsx}" },
+    projectPath: projectPath,
   });
 
   await new Promise((resolve) => {
@@ -1946,6 +1953,7 @@ async function simulateSpecCreation(
   emitSpecRegenerationEvent({
     type: "spec_regeneration_progress",
     content: "[Phase: analysis] Detecting tech stack...\n",
+    projectPath: projectPath,
   });
 
   await new Promise((resolve) => {
@@ -1989,6 +1997,7 @@ async function simulateSpecCreation(
   emitSpecRegenerationEvent({
     type: "spec_regeneration_complete",
     message: "All tasks completed!",
+    projectPath: projectPath,
   });
 
   mockSpecRegenerationRunning = false;
@@ -2004,6 +2013,7 @@ async function simulateSpecRegeneration(
   emitSpecRegenerationEvent({
     type: "spec_regeneration_progress",
     content: "[Phase: initialization] Starting spec regeneration...\n",
+    projectPath: projectPath,
   });
 
   await new Promise((resolve) => {
@@ -2015,6 +2025,7 @@ async function simulateSpecRegeneration(
   emitSpecRegenerationEvent({
     type: "spec_regeneration_progress",
     content: "[Phase: analysis] Analyzing codebase...\n",
+    projectPath: projectPath,
   });
 
   await new Promise((resolve) => {
@@ -2049,6 +2060,7 @@ async function simulateSpecRegeneration(
   emitSpecRegenerationEvent({
     type: "spec_regeneration_complete",
     message: "All tasks completed!",
+    projectPath: projectPath,
   });
 
   mockSpecRegenerationRunning = false;
@@ -2062,6 +2074,7 @@ async function simulateFeatureGeneration(projectPath: string) {
     type: "spec_regeneration_progress",
     content:
       "[Phase: initialization] Starting feature generation from existing app_spec.txt...\n",
+    projectPath: projectPath,
   });
 
   await new Promise((resolve) => {
@@ -2072,6 +2085,7 @@ async function simulateFeatureGeneration(projectPath: string) {
   emitSpecRegenerationEvent({
     type: "spec_regeneration_progress",
     content: "[Phase: feature_generation] Reading implementation roadmap...\n",
+    projectPath: projectPath,
   });
 
   await new Promise((resolve) => {
@@ -2083,6 +2097,7 @@ async function simulateFeatureGeneration(projectPath: string) {
   emitSpecRegenerationEvent({
     type: "spec_regeneration_progress",
     content: "[Phase: feature_generation] Creating features from roadmap...\n",
+    projectPath: projectPath,
   });
 
   await new Promise((resolve) => {
@@ -2094,11 +2109,13 @@ async function simulateFeatureGeneration(projectPath: string) {
   emitSpecRegenerationEvent({
     type: "spec_regeneration_progress",
     content: "[Phase: complete] All tasks completed!\n",
+    projectPath: projectPath,
   });
 
   emitSpecRegenerationEvent({
     type: "spec_regeneration_complete",
     message: "All tasks completed!",
+    projectPath: projectPath,
   });
 
   mockSpecRegenerationRunning = false;

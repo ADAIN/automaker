@@ -41,7 +41,10 @@ interface ValidationErrors {
 interface NewProjectModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateBlankProject: (projectName: string, parentDir: string) => Promise<void>;
+  onCreateBlankProject: (
+    projectName: string,
+    parentDir: string
+  ) => Promise<void>;
   onCreateFromTemplate: (
     template: StarterTemplate,
     projectName: string,
@@ -67,7 +70,8 @@ export function NewProjectModal({
   const [projectName, setProjectName] = useState("");
   const [workspaceDir, setWorkspaceDir] = useState<string>("");
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<StarterTemplate | null>(null);
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<StarterTemplate | null>(null);
   const [useCustomUrl, setUseCustomUrl] = useState(false);
   const [customUrl, setCustomUrl] = useState("");
   const [errors, setErrors] = useState<ValidationErrors>({});
@@ -78,7 +82,8 @@ export function NewProjectModal({
     if (open) {
       setIsLoadingWorkspace(true);
       const httpClient = getHttpApiClient();
-      httpClient.workspace.getConfig()
+      httpClient.workspace
+        .getConfig()
         .then((result) => {
           if (result.success && result.workspaceDir) {
             setWorkspaceDir(result.workspaceDir);
@@ -113,7 +118,10 @@ export function NewProjectModal({
   }, [projectName, errors.projectName]);
 
   useEffect(() => {
-    if ((selectedTemplate || (useCustomUrl && customUrl)) && errors.templateSelection) {
+    if (
+      (selectedTemplate || (useCustomUrl && customUrl)) &&
+      errors.templateSelection
+    ) {
       setErrors((prev) => ({ ...prev, templateSelection: false }));
     }
   }, [selectedTemplate, useCustomUrl, customUrl, errors.templateSelection]);
@@ -187,7 +195,9 @@ export function NewProjectModal({
   const handleBrowseDirectory = async () => {
     const selectedPath = await openFileBrowser({
       title: "Select Base Project Directory",
-      description: "Choose the parent directory where your project will be created",
+      description:
+        "Choose the parent directory where your project will be created",
+      initialPath: workspaceDir || undefined,
     });
     if (selectedPath) {
       setWorkspaceDir(selectedPath);
@@ -199,9 +209,16 @@ export function NewProjectModal({
   };
 
   // Use platform-specific path separator
-  const pathSep = typeof window !== 'undefined' && (window as any).electronAPI ?
-    (navigator.platform.indexOf('Win') !== -1 ? '\\' : '/') : '/';
-  const projectPath = workspaceDir && projectName ? `${workspaceDir}${pathSep}${projectName}` : "";
+  const pathSep =
+    typeof window !== "undefined" && (window as any).electronAPI
+      ? navigator.platform.indexOf("Win") !== -1
+        ? "\\"
+        : "/"
+      : "/";
+  const projectPath =
+    workspaceDir && projectName
+      ? `${workspaceDir}${pathSep}${projectName}`
+      : "";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -210,7 +227,9 @@ export function NewProjectModal({
         data-testid="new-project-modal"
       >
         <DialogHeader className="pb-2">
-          <DialogTitle className="text-foreground">Create New Project</DialogTitle>
+          <DialogTitle className="text-foreground">
+            Create New Project
+          </DialogTitle>
           <DialogDescription className="text-muted-foreground">
             Start with a blank project or choose from a starter template.
           </DialogDescription>
@@ -219,8 +238,15 @@ export function NewProjectModal({
         {/* Project Name Input - Always visible at top */}
         <div className="space-y-3 pb-4 border-b border-border">
           <div className="space-y-2">
-            <Label htmlFor="project-name" className={cn("text-foreground", errors.projectName && "text-red-500")}>
-              Project Name {errors.projectName && <span className="text-red-500">*</span>}
+            <Label
+              htmlFor="project-name"
+              className={cn(
+                "text-foreground",
+                errors.projectName && "text-red-500"
+              )}
+            >
+              Project Name{" "}
+              {errors.projectName && <span className="text-red-500">*</span>}
             </Label>
             <Input
               id="project-name"
@@ -242,16 +268,23 @@ export function NewProjectModal({
           </div>
 
           {/* Workspace Directory Display */}
-          <div className={cn(
-            "flex items-center gap-2 text-sm",
-            errors.workspaceDir ? "text-red-500" : "text-muted-foreground"
-          )}>
+          <div
+            className={cn(
+              "flex items-center gap-2 text-sm",
+              errors.workspaceDir ? "text-red-500" : "text-muted-foreground"
+            )}
+          >
             <Folder className="w-4 h-4 shrink-0" />
             <span className="flex-1 min-w-0">
               {isLoadingWorkspace ? (
                 "Loading workspace..."
               ) : workspaceDir ? (
-                <>Will be created at: <code className="text-xs bg-muted px-1.5 py-0.5 rounded truncate">{projectPath || "..."}</code></>
+                <>
+                  Will be created at:{" "}
+                  <code className="text-xs bg-muted px-1.5 py-0.5 rounded truncate">
+                    {projectPath || workspaceDir}
+                  </code>
+                </>
               ) : (
                 <span className="text-red-500">No workspace configured</span>
               )}
@@ -302,14 +335,18 @@ export function NewProjectModal({
               <div className="space-y-4">
                 {/* Error message for template selection */}
                 {errors.templateSelection && (
-                  <p className="text-sm text-red-500">Please select a template or enter a custom GitHub URL</p>
+                  <p className="text-sm text-red-500">
+                    Please select a template or enter a custom GitHub URL
+                  </p>
                 )}
 
                 {/* Preset Templates */}
-                <div className={cn(
-                  "space-y-3 rounded-lg p-1 -m-1",
-                  errors.templateSelection && "ring-2 ring-red-500/50"
-                )}>
+                <div
+                  className={cn(
+                    "space-y-3 rounded-lg p-1 -m-1",
+                    errors.templateSelection && "ring-2 ring-red-500/50"
+                  )}
+                >
                   {starterTemplates.map((template) => (
                     <div
                       key={template.id}
@@ -328,9 +365,10 @@ export function NewProjectModal({
                             <h4 className="font-medium text-foreground">
                               {template.name}
                             </h4>
-                            {selectedTemplate?.id === template.id && !useCustomUrl && (
-                              <Check className="w-4 h-4 text-brand-500" />
-                            )}
+                            {selectedTemplate?.id === template.id &&
+                              !useCustomUrl && (
+                                <Check className="w-4 h-4 text-brand-500" />
+                              )}
                           </div>
                           <p className="text-sm text-muted-foreground mb-3">
                             {template.description}
@@ -391,15 +429,22 @@ export function NewProjectModal({
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <Link className="w-4 h-4 text-muted-foreground" />
-                      <h4 className="font-medium text-foreground">Custom GitHub URL</h4>
-                      {useCustomUrl && <Check className="w-4 h-4 text-brand-500" />}
+                      <h4 className="font-medium text-foreground">
+                        Custom GitHub URL
+                      </h4>
+                      {useCustomUrl && (
+                        <Check className="w-4 h-4 text-brand-500" />
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground mb-3">
                       Clone any public GitHub repository as a starting point.
                     </p>
 
                     {useCustomUrl && (
-                      <div onClick={(e) => e.stopPropagation()} className="space-y-1">
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="space-y-1"
+                      >
                         <Input
                           placeholder="https://github.com/username/repository"
                           value={customUrl}
@@ -413,7 +458,9 @@ export function NewProjectModal({
                           data-testid="custom-url-input"
                         />
                         {errors.customUrl && (
-                          <p className="text-xs text-red-500">GitHub URL is required</p>
+                          <p className="text-xs text-red-500">
+                            GitHub URL is required
+                          </p>
                         )}
                       </div>
                     )}

@@ -28,6 +28,7 @@ import {
 } from "@/store/app-store";
 import { getElectronAPI } from "@/lib/electron";
 import { cn, modelSupportsThinking } from "@/lib/utils";
+import type { SpecRegenerationEvent } from "@/types/electron";
 import {
   Card,
   CardDescription,
@@ -179,6 +180,8 @@ export function BoardView() {
     kanbanCardDetailLevel,
     setKanbanCardDetailLevel,
     boardBackgroundByProject,
+    specCreatingForProject,
+    setSpecCreatingForProject,
   } = useAppStore();
   const shortcuts = useKeyboardShortcutsConfig();
   const [activeFeature, setActiveFeature] = useState<Feature | null>(null);
@@ -233,6 +236,9 @@ export function BoardView() {
   const [searchQuery, setSearchQuery] = useState("");
   // Validation state for add feature form
   const [descriptionError, setDescriptionError] = useState(false);
+  // Derive spec creation state from store - check if current project is the one being created
+  const isCreatingSpec = specCreatingForProject === currentProject?.path;
+  const creatingSpecProjectPath = specCreatingForProject;
 
   // Make current project available globally for modal
   useEffect(() => {
@@ -263,6 +269,37 @@ export function BoardView() {
       unsubscribe();
     };
   }, []);
+
+  // Subscribe to spec regeneration events to clear state on completion
+  useEffect(() => {
+    const api = getElectronAPI();
+    if (!api.specRegeneration) return;
+
+    const unsubscribe = api.specRegeneration.onEvent((event) => {
+      console.log(
+        "[BoardView] Spec regeneration event:",
+        event.type,
+        "for project:",
+        event.projectPath
+      );
+
+      // Only handle completion/error events for the project being created
+      // The creating state is set by sidebar when user initiates the action
+      if (event.projectPath !== specCreatingForProject) {
+        return;
+      }
+
+      if (event.type === "spec_regeneration_complete") {
+        setSpecCreatingForProject(null);
+      } else if (event.type === "spec_regeneration_error") {
+        setSpecCreatingForProject(null);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [specCreatingForProject, setSpecCreatingForProject]);
 
   // Track previous project to detect switches
   const prevProjectPathRef = useRef<string | null>(null);
@@ -1791,34 +1828,50 @@ export function BoardView() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Search Bar Row */}
         <div className="px-4 pt-4 pb-2 flex items-center justify-between">
-          <div className="relative max-w-md flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <Input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Search features by keyword..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-12 border-border"
-              data-testid="kanban-search-input"
-            />
-            {searchQuery ? (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-sm hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                data-testid="kanban-search-clear"
-                aria-label="Clear search"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            ) : (
-              <span
-                className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-mono rounded bg-brand-500/10 border border-brand-500/30 text-brand-400/70"
-                data-testid="kanban-search-hotkey"
-              >
-                /
-              </span>
-            )}
+          <div className="relative max-w-md flex-1 flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search features by keyword..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-12 border-border"
+                data-testid="kanban-search-input"
+              />
+              {searchQuery ? (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-sm hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="kanban-search-clear"
+                  aria-label="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              ) : (
+                <span
+                  className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-mono rounded bg-brand-500/10 border border-brand-500/30 text-brand-400/70"
+                  data-testid="kanban-search-hotkey"
+                >
+                  /
+                </span>
+              )}
+            </div>
+            {/* Spec Creation Loading Badge */}
+            {isCreatingSpec &&
+              currentProject?.path === creatingSpecProjectPath && (
+                <div
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-brand-500/10 border border-brand-500/20 shrink-0"
+                  title="Creating App Specification"
+                  data-testid="spec-creation-badge"
+                >
+                  <Loader2 className="w-3 h-3 animate-spin text-brand-500 shrink-0" />
+                  <span className="text-xs font-medium text-brand-500 whitespace-nowrap">
+                    Creating spec
+                  </span>
+                </div>
+              )}
           </div>
 
           {/* Board Background & Detail Level Controls */}

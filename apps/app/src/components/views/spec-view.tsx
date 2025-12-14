@@ -14,7 +14,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Save, RefreshCw, FileText, Sparkles, Loader2, FilePlus2, AlertCircle, ListPlus, CheckCircle2 } from "lucide-react";
+import {
+  Save,
+  RefreshCw,
+  FileText,
+  Sparkles,
+  Loader2,
+  FilePlus2,
+  AlertCircle,
+  ListPlus,
+  CheckCircle2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { XmlSyntaxEditor } from "@/components/ui/xml-syntax-editor";
@@ -43,14 +53,14 @@ export function SpecView() {
   const [projectOverview, setProjectOverview] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [generateFeatures, setGenerateFeatures] = useState(true);
-  
+
   // Generate features only state
   const [isGeneratingFeatures, setIsGeneratingFeatures] = useState(false);
-  
+
   // Logs state (kept for internal tracking, but UI removed)
   const [logs, setLogs] = useState<string>("");
   const logsRef = useRef<string>("");
-  
+
   // Phase tracking and status
   const [currentPhase, setCurrentPhase] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -107,28 +117,33 @@ export function SpecView() {
 
         if (status.success && status.isRunning) {
           // Something is running - restore state using backend's authoritative phase
-          console.log("[SpecView] Spec generation is running - restoring state", { phase: status.currentPhase });
-          
+          console.log(
+            "[SpecView] Spec generation is running - restoring state",
+            { phase: status.currentPhase }
+          );
+
           if (!stateRestoredRef.current) {
             setIsCreating(true);
             setIsRegenerating(true);
             stateRestoredRef.current = true;
           }
-          
+
           // Use the backend's currentPhase directly - single source of truth
           if (status.currentPhase) {
             setCurrentPhase(status.currentPhase);
           } else {
             setCurrentPhase("in progress");
           }
-          
+
           // Add resume message to logs if needed
           if (!logsRef.current) {
-            const resumeMessage = "[Status] Resumed monitoring existing spec generation process...\n";
+            const resumeMessage =
+              "[Status] Resumed monitoring existing spec generation process...\n";
             logsRef.current = resumeMessage;
             setLogs(resumeMessage);
           } else if (!logsRef.current.includes("Resumed monitoring")) {
-            const resumeMessage = "\n[Status] Resumed monitoring existing spec generation process...\n";
+            const resumeMessage =
+              "\n[Status] Resumed monitoring existing spec generation process...\n";
             logsRef.current = logsRef.current + resumeMessage;
             setLogs(logsRef.current);
           }
@@ -154,7 +169,11 @@ export function SpecView() {
   // Sync state when tab becomes visible (user returns to spec editor)
   useEffect(() => {
     const handleVisibilityChange = async () => {
-      if (!document.hidden && currentProject && (isCreating || isRegenerating || isGeneratingFeatures)) {
+      if (
+        !document.hidden &&
+        currentProject &&
+        (isCreating || isRegenerating || isGeneratingFeatures)
+      ) {
         // Tab became visible and we think we're still generating - verify status from backend
         try {
           const api = getElectronAPI();
@@ -162,10 +181,12 @@ export function SpecView() {
 
           const status = await api.specRegeneration.status();
           console.log("[SpecView] Visibility change - status check:", status);
-          
+
           if (!status.isRunning) {
             // Backend says not running - clear state
-            console.log("[SpecView] Visibility change: Backend indicates generation complete - clearing state");
+            console.log(
+              "[SpecView] Visibility change: Backend indicates generation complete - clearing state"
+            );
             setIsCreating(false);
             setIsRegenerating(false);
             setIsGeneratingFeatures(false);
@@ -177,7 +198,10 @@ export function SpecView() {
             setCurrentPhase(status.currentPhase);
           }
         } catch (error) {
-          console.error("[SpecView] Failed to check status on visibility change:", error);
+          console.error(
+            "[SpecView] Failed to check status on visibility change:",
+            error
+          );
         }
       }
     };
@@ -186,11 +210,21 @@ export function SpecView() {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [currentProject, isCreating, isRegenerating, isGeneratingFeatures, loadSpec]);
+  }, [
+    currentProject,
+    isCreating,
+    isRegenerating,
+    isGeneratingFeatures,
+    loadSpec,
+  ]);
 
   // Periodic status check to ensure state stays in sync (only when we think we're running)
   useEffect(() => {
-    if (!currentProject || (!isCreating && !isRegenerating && !isGeneratingFeatures)) return;
+    if (
+      !currentProject ||
+      (!isCreating && !isRegenerating && !isGeneratingFeatures)
+    )
+      return;
 
     const intervalId = setInterval(async () => {
       try {
@@ -198,21 +232,26 @@ export function SpecView() {
         if (!api.specRegeneration) return;
 
         const status = await api.specRegeneration.status();
-        
+
         if (!status.isRunning) {
           // Backend says not running - clear state
-          console.log("[SpecView] Periodic check: Backend indicates generation complete - clearing state");
+          console.log(
+            "[SpecView] Periodic check: Backend indicates generation complete - clearing state"
+          );
           setIsCreating(false);
           setIsRegenerating(false);
           setIsGeneratingFeatures(false);
           setCurrentPhase("");
           stateRestoredRef.current = false;
           loadSpec();
-        } else if (status.currentPhase && status.currentPhase !== currentPhase) {
+        } else if (
+          status.currentPhase &&
+          status.currentPhase !== currentPhase
+        ) {
           // Still running but phase changed - update from backend
-          console.log("[SpecView] Periodic check: Phase updated from backend", { 
-            old: currentPhase, 
-            new: status.currentPhase 
+          console.log("[SpecView] Periodic check: Phase updated from backend", {
+            old: currentPhase,
+            new: status.currentPhase,
           });
           setCurrentPhase(status.currentPhase);
         }
@@ -224,173 +263,214 @@ export function SpecView() {
     return () => {
       clearInterval(intervalId);
     };
-  }, [currentProject, isCreating, isRegenerating, isGeneratingFeatures, currentPhase, loadSpec]);
+  }, [
+    currentProject,
+    isCreating,
+    isRegenerating,
+    isGeneratingFeatures,
+    currentPhase,
+    loadSpec,
+  ]);
 
   // Subscribe to spec regeneration events
   useEffect(() => {
     const api = getElectronAPI();
     if (!api.specRegeneration) return;
 
-    const unsubscribe = api.specRegeneration.onEvent((event: SpecRegenerationEvent) => {
-      console.log("[SpecView] Regeneration event:", event.type);
+    const unsubscribe = api.specRegeneration.onEvent(
+      (event: SpecRegenerationEvent) => {
+        console.log(
+          "[SpecView] Regeneration event:",
+          event.type,
+          "for project:",
+          event.projectPath
+        );
 
-      if (event.type === "spec_regeneration_progress") {
-        // Extract phase from content if present
-        const phaseMatch = event.content.match(/\[Phase:\s*([^\]]+)\]/);
-        if (phaseMatch) {
-          const phase = phaseMatch[1];
-          setCurrentPhase(phase);
-          console.log(`[SpecView] Phase updated: ${phase}`);
-          
-          // If phase is "complete", clear running state immediately
-          if (phase === "complete") {
-            console.log("[SpecView] Phase is complete - clearing state");
+        // Only handle events for the current project
+        if (event.projectPath !== currentProject?.path) {
+          console.log("[SpecView] Ignoring event - not for current project");
+          return;
+        }
+
+        if (event.type === "spec_regeneration_progress") {
+          // Extract phase from content if present
+          const phaseMatch = event.content.match(/\[Phase:\s*([^\]]+)\]/);
+          if (phaseMatch) {
+            const phase = phaseMatch[1];
+            setCurrentPhase(phase);
+            console.log(`[SpecView] Phase updated: ${phase}`);
+
+            // If phase is "complete", clear running state immediately
+            if (phase === "complete") {
+              console.log("[SpecView] Phase is complete - clearing state");
+              setIsCreating(false);
+              setIsRegenerating(false);
+              stateRestoredRef.current = false;
+              // Small delay to ensure spec file is written
+              setTimeout(() => {
+                loadSpec();
+              }, SPEC_FILE_WRITE_DELAY);
+            }
+          }
+
+          // Check for completion indicators in content
+          if (
+            event.content.includes("All tasks completed") ||
+            event.content.includes("✓ All tasks completed")
+          ) {
+            // This indicates everything is done - clear state immediately
+            console.log(
+              "[SpecView] Detected completion in progress message - clearing state"
+            );
             setIsCreating(false);
             setIsRegenerating(false);
+            setCurrentPhase("");
             stateRestoredRef.current = false;
-            // Small delay to ensure spec file is written
             setTimeout(() => {
               loadSpec();
             }, SPEC_FILE_WRITE_DELAY);
           }
-        }
 
-        // Check for completion indicators in content
-        if (event.content.includes("All tasks completed") || 
-            event.content.includes("✓ All tasks completed")) {
-          // This indicates everything is done - clear state immediately
-          console.log("[SpecView] Detected completion in progress message - clearing state");
-          setIsCreating(false);
-          setIsRegenerating(false);
-          setCurrentPhase("");
-          stateRestoredRef.current = false;
-          setTimeout(() => {
-            loadSpec();
-          }, SPEC_FILE_WRITE_DELAY);
-        }
+          // Append progress to logs
+          const newLog = logsRef.current + event.content;
+          logsRef.current = newLog;
+          setLogs(newLog);
+          console.log("[SpecView] Progress:", event.content.substring(0, 100));
 
-        // Append progress to logs
-        const newLog = logsRef.current + event.content;
-        logsRef.current = newLog;
-        setLogs(newLog);
-        console.log("[SpecView] Progress:", event.content.substring(0, 100));
-        
-        // Clear error message when we get new progress
-        if (errorMessage) {
-          setErrorMessage("");
-        }
-      } else if (event.type === "spec_regeneration_tool") {
-        // Check if this is a feature creation tool
-        const isFeatureTool = event.tool === "mcp__automaker-tools__UpdateFeatureStatus" || 
-                             event.tool === "UpdateFeatureStatus" ||
-                             event.tool?.includes("Feature");
-        
-        if (isFeatureTool) {
-          // Ensure we're in feature generation phase
-          if (currentPhase !== "feature_generation") {
-            setCurrentPhase("feature_generation");
+          // Clear error message when we get new progress
+          if (errorMessage) {
+            setErrorMessage("");
+          }
+        } else if (event.type === "spec_regeneration_tool") {
+          // Check if this is a feature creation tool
+          const isFeatureTool =
+            event.tool === "mcp__automaker-tools__UpdateFeatureStatus" ||
+            event.tool === "UpdateFeatureStatus" ||
+            event.tool?.includes("Feature");
+
+          if (isFeatureTool) {
+            // Ensure we're in feature generation phase
+            if (currentPhase !== "feature_generation") {
+              setCurrentPhase("feature_generation");
+              setIsCreating(true);
+              setIsRegenerating(true);
+              console.log(
+                "[SpecView] Detected feature creation tool - setting phase to feature_generation"
+              );
+            }
+          }
+
+          // Log tool usage with details
+          const toolInput = event.input
+            ? ` (${JSON.stringify(event.input).substring(0, 100)}...)`
+            : "";
+          const toolLog = `\n[Tool] ${event.tool}${toolInput}\n`;
+          const newLog = logsRef.current + toolLog;
+          logsRef.current = newLog;
+          setLogs(newLog);
+          console.log("[SpecView] Tool:", event.tool, event.input);
+        } else if (event.type === "spec_regeneration_complete") {
+          // Add completion message to logs first
+          const completionLog =
+            logsRef.current + `\n[Complete] ${event.message}\n`;
+          logsRef.current = completionLog;
+          setLogs(completionLog);
+
+          // --- Completion Detection Logic ---
+          // The backend sends explicit signals for completion:
+          // 1. "All tasks completed" in the message
+          // 2. [Phase: complete] marker in logs
+          // 3. "Spec regeneration complete!" for regeneration
+          // 4. "Initial spec creation complete!" for creation without features
+          const isFinalCompletionMessage =
+            event.message?.includes("All tasks completed") ||
+            event.message === "All tasks completed!" ||
+            event.message === "All tasks completed" ||
+            event.message === "Spec regeneration complete!" ||
+            event.message === "Initial spec creation complete!";
+
+          const hasCompletePhase =
+            logsRef.current.includes("[Phase: complete]");
+
+          // Intermediate completion means features are being generated after spec creation
+          const isIntermediateCompletion =
+            event.message?.includes("Features are being generated") ||
+            event.message?.includes("features are being generated");
+
+          // Rely solely on explicit backend signals
+          const shouldComplete =
+            (isFinalCompletionMessage || hasCompletePhase) &&
+            !isIntermediateCompletion;
+
+          if (shouldComplete) {
+            // Fully complete - clear all states immediately
+            console.log(
+              "[SpecView] Final completion detected - clearing state",
+              {
+                isFinalCompletionMessage,
+                hasCompletePhase,
+                message: event.message,
+              }
+            );
+            setIsRegenerating(false);
+            setIsCreating(false);
+            setIsGeneratingFeatures(false);
+            setCurrentPhase("");
+            setShowRegenerateDialog(false);
+            setShowCreateDialog(false);
+            setProjectDefinition("");
+            setProjectOverview("");
+            setErrorMessage("");
+            stateRestoredRef.current = false;
+
+            // Reload the spec with delay to ensure file is written to disk
+            setTimeout(() => {
+              loadSpec();
+            }, SPEC_FILE_WRITE_DELAY);
+
+            // Show success toast notification
+            const isRegeneration = event.message?.includes("regeneration");
+            const isFeatureGeneration =
+              event.message?.includes("Feature generation");
+            toast.success(
+              isFeatureGeneration
+                ? "Feature Generation Complete"
+                : isRegeneration
+                ? "Spec Regeneration Complete"
+                : "Spec Creation Complete",
+              {
+                description: isFeatureGeneration
+                  ? "Features have been created from the app specification."
+                  : "Your app specification has been saved.",
+                icon: <CheckCircle2 className="w-4 h-4" />,
+              }
+            );
+          } else if (isIntermediateCompletion) {
+            // Intermediate completion - keep state active for feature generation
             setIsCreating(true);
             setIsRegenerating(true);
-            console.log("[SpecView] Detected feature creation tool - setting phase to feature_generation");
+            setCurrentPhase("feature_generation");
+            console.log(
+              "[SpecView] Intermediate completion, continuing with feature generation"
+            );
           }
-        }
-        
-        // Log tool usage with details
-        const toolInput = event.input ? ` (${JSON.stringify(event.input).substring(0, 100)}...)` : "";
-        const toolLog = `\n[Tool] ${event.tool}${toolInput}\n`;
-        const newLog = logsRef.current + toolLog;
-        logsRef.current = newLog;
-        setLogs(newLog);
-        console.log("[SpecView] Tool:", event.tool, event.input);
-      } else if (event.type === "spec_regeneration_complete") {
-        // Add completion message to logs first
-        const completionLog = logsRef.current + `\n[Complete] ${event.message}\n`;
-        logsRef.current = completionLog;
-        setLogs(completionLog);
-        
-        // --- Completion Detection Logic ---
-        // The backend sends explicit signals for completion:
-        // 1. "All tasks completed" in the message
-        // 2. [Phase: complete] marker in logs
-        // 3. "Spec regeneration complete!" for regeneration
-        // 4. "Initial spec creation complete!" for creation without features
-        const isFinalCompletionMessage = event.message?.includes("All tasks completed") ||
-                                         event.message === "All tasks completed!" ||
-                                         event.message === "All tasks completed" ||
-                                         event.message === "Spec regeneration complete!" ||
-                                         event.message === "Initial spec creation complete!";
-        
-        const hasCompletePhase = logsRef.current.includes("[Phase: complete]");
-        
-        // Intermediate completion means features are being generated after spec creation
-        const isIntermediateCompletion = event.message?.includes("Features are being generated") ||
-                                         event.message?.includes("features are being generated");
-        
-        // Rely solely on explicit backend signals
-        const shouldComplete = (isFinalCompletionMessage || hasCompletePhase) && !isIntermediateCompletion;
-        
-        if (shouldComplete) {
-          // Fully complete - clear all states immediately
-          console.log("[SpecView] Final completion detected - clearing state", { 
-            isFinalCompletionMessage, 
-            hasCompletePhase, 
-            message: event.message 
-          });
+
+          console.log("[SpecView] Spec generation event:", event.message);
+        } else if (event.type === "spec_regeneration_error") {
           setIsRegenerating(false);
           setIsCreating(false);
           setIsGeneratingFeatures(false);
-          setCurrentPhase("");
-          setShowRegenerateDialog(false);
-          setShowCreateDialog(false);
-          setProjectDefinition("");
-          setProjectOverview("");
-          setErrorMessage("");
-          stateRestoredRef.current = false;
-          
-          // Reload the spec with delay to ensure file is written to disk
-          setTimeout(() => {
-            loadSpec();
-          }, SPEC_FILE_WRITE_DELAY);
-          
-          // Show success toast notification
-          const isRegeneration = event.message?.includes("regeneration");
-          const isFeatureGeneration = event.message?.includes("Feature generation");
-          toast.success(
-            isFeatureGeneration 
-              ? "Feature Generation Complete" 
-              : isRegeneration 
-                ? "Spec Regeneration Complete" 
-                : "Spec Creation Complete",
-            {
-              description: isFeatureGeneration 
-                ? "Features have been created from the app specification."
-                : "Your app specification has been saved.",
-              icon: <CheckCircle2 className="w-4 h-4" />,
-            }
-          );
-        } else if (isIntermediateCompletion) {
-          // Intermediate completion - keep state active for feature generation
-          setIsCreating(true);
-          setIsRegenerating(true);
-          setCurrentPhase("feature_generation");
-          console.log("[SpecView] Intermediate completion, continuing with feature generation");
+          setCurrentPhase("error");
+          setErrorMessage(event.error);
+          stateRestoredRef.current = false; // Reset restoration flag
+          // Add error to logs
+          const errorLog = logsRef.current + `\n\n[ERROR] ${event.error}\n`;
+          logsRef.current = errorLog;
+          setLogs(errorLog);
+          console.error("[SpecView] Regeneration error:", event.error);
         }
-        
-        console.log("[SpecView] Spec generation event:", event.message);
-      } else if (event.type === "spec_regeneration_error") {
-        setIsRegenerating(false);
-        setIsCreating(false);
-        setIsGeneratingFeatures(false);
-        setCurrentPhase("error");
-        setErrorMessage(event.error);
-        stateRestoredRef.current = false; // Reset restoration flag
-        // Add error to logs
-        const errorLog = logsRef.current + `\n\n[ERROR] ${event.error}\n`;
-        logsRef.current = errorLog;
-        setLogs(errorLog);
-        console.error("[SpecView] Regeneration error:", event.error);
       }
-    });
+    );
 
     return () => {
       unsubscribe();
@@ -476,7 +556,10 @@ export function SpecView() {
     // Reset logs when starting new generation
     logsRef.current = "";
     setLogs("");
-    console.log("[SpecView] Starting spec creation, generateFeatures:", generateFeatures);
+    console.log(
+      "[SpecView] Starting spec creation, generateFeatures:",
+      generateFeatures
+    );
     try {
       const api = getElectronAPI();
       if (!api.specRegeneration) {
@@ -537,7 +620,10 @@ export function SpecView() {
 
       if (!result.success) {
         const errorMsg = result.error || "Unknown error";
-        console.error("[SpecView] Failed to start feature generation:", errorMsg);
+        console.error(
+          "[SpecView] Failed to start feature generation:",
+          errorMsg
+        );
         setIsGeneratingFeatures(false);
         setCurrentPhase("error");
         setErrorMessage(errorMsg);
@@ -606,18 +692,31 @@ export function SpecView() {
               </div>
               <div className="flex flex-col gap-1 min-w-0">
                 <span className="text-sm font-semibold text-primary leading-tight tracking-tight">
-                  {isCreating ? "Generating Specification" : "Regenerating Specification"}
+                  {isCreating
+                    ? "Generating Specification"
+                    : "Regenerating Specification"}
                 </span>
                 {currentPhase && (
                   <span className="text-xs text-muted-foreground/90 leading-tight font-medium">
                     {currentPhase === "initialization" && "Initializing..."}
                     {currentPhase === "setup" && "Setting up tools..."}
-                    {currentPhase === "analysis" && "Analyzing project structure..."}
-                    {currentPhase === "spec_complete" && "Spec created! Generating features..."}
-                    {currentPhase === "feature_generation" && "Creating features from roadmap..."}
+                    {currentPhase === "analysis" &&
+                      "Analyzing project structure..."}
+                    {currentPhase === "spec_complete" &&
+                      "Spec created! Generating features..."}
+                    {currentPhase === "feature_generation" &&
+                      "Creating features from roadmap..."}
                     {currentPhase === "complete" && "Complete!"}
                     {currentPhase === "error" && "Error occurred"}
-                    {!["initialization", "setup", "analysis", "spec_complete", "feature_generation", "complete", "error"].includes(currentPhase) && currentPhase}
+                    {![
+                      "initialization",
+                      "setup",
+                      "analysis",
+                      "spec_complete",
+                      "feature_generation",
+                      "complete",
+                      "error",
+                    ].includes(currentPhase) && currentPhase}
                   </span>
                 )}
               </div>
@@ -653,12 +752,23 @@ export function SpecView() {
                       <span className="text-sm font-semibold text-primary text-center tracking-tight">
                         {currentPhase === "initialization" && "Initializing..."}
                         {currentPhase === "setup" && "Setting up tools..."}
-                        {currentPhase === "analysis" && "Analyzing project structure..."}
-                        {currentPhase === "spec_complete" && "Spec created! Generating features..."}
-                        {currentPhase === "feature_generation" && "Creating features from roadmap..."}
+                        {currentPhase === "analysis" &&
+                          "Analyzing project structure..."}
+                        {currentPhase === "spec_complete" &&
+                          "Spec created! Generating features..."}
+                        {currentPhase === "feature_generation" &&
+                          "Creating features from roadmap..."}
                         {currentPhase === "complete" && "Complete!"}
                         {currentPhase === "error" && "Error occurred"}
-                        {!["initialization", "setup", "analysis", "spec_complete", "feature_generation", "complete", "error"].includes(currentPhase) && currentPhase}
+                        {![
+                          "initialization",
+                          "setup",
+                          "analysis",
+                          "spec_complete",
+                          "feature_generation",
+                          "complete",
+                          "error",
+                        ].includes(currentPhase) && currentPhase}
                       </span>
                     </div>
                   )}
@@ -682,10 +792,7 @@ export function SpecView() {
             )}
             {!isCreating && (
               <div className="flex gap-2 justify-center">
-                <Button
-                  size="lg"
-                  onClick={() => setShowCreateDialog(true)}
-                >
+                <Button size="lg" onClick={() => setShowCreateDialog(true)}>
                   <FilePlus2 className="w-5 h-5 mr-2" />
                   Create app_spec
                 </Button>
@@ -695,8 +802,8 @@ export function SpecView() {
         </div>
 
         {/* Create Dialog */}
-        <Dialog 
-          open={showCreateDialog} 
+        <Dialog
+          open={showCreateDialog}
           onOpenChange={(open) => {
             if (!open && !isCreating) {
               setShowCreateDialog(false);
@@ -707,20 +814,20 @@ export function SpecView() {
             <DialogHeader>
               <DialogTitle>Create App Specification</DialogTitle>
               <DialogDescription className="text-muted-foreground">
-                We didn&apos;t find an app_spec.txt file. Let us help you generate your app_spec.txt
-                to help describe your project for our system. We&apos;ll analyze your project&apos;s
-                tech stack and create a comprehensive specification.
+                We didn&apos;t find an app_spec.txt file. Let us help you
+                generate your app_spec.txt to help describe your project for our
+                system. We&apos;ll analyze your project&apos;s tech stack and
+                create a comprehensive specification.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Project Overview
-                </label>
+                <label className="text-sm font-medium">Project Overview</label>
                 <p className="text-xs text-muted-foreground">
-                  Describe what your project does and what features you want to build.
-                  Be as detailed as you want - this will help us create a better specification.
+                  Describe what your project does and what features you want to
+                  build. Be as detailed as you want - this will help us create a
+                  better specification.
                 </p>
                 <textarea
                   className="w-full h-48 p-3 rounded-md border border-border bg-background font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
@@ -736,19 +843,23 @@ export function SpecView() {
                 <Checkbox
                   id="generate-features"
                   checked={generateFeatures}
-                  onCheckedChange={(checked) => setGenerateFeatures(checked === true)}
+                  onCheckedChange={(checked) =>
+                    setGenerateFeatures(checked === true)
+                  }
                   disabled={isCreating}
                 />
                 <div className="space-y-1">
                   <label
                     htmlFor="generate-features"
-                    className={`text-sm font-medium ${isCreating ? "" : "cursor-pointer"}`}
+                    className={`text-sm font-medium ${
+                      isCreating ? "" : "cursor-pointer"
+                    }`}
                   >
                     Generate feature list
                   </label>
                   <p className="text-xs text-muted-foreground">
-                    Automatically create features in the features folder from the
-                    implementation roadmap after the spec is generated.
+                    Automatically create features in the features folder from
+                    the implementation roadmap after the spec is generated.
                   </p>
                 </div>
               </div>
@@ -812,18 +923,33 @@ export function SpecView() {
               </div>
               <div className="flex flex-col gap-1 min-w-0">
                 <span className="text-sm font-semibold text-primary leading-tight tracking-tight">
-                  {isGeneratingFeatures ? "Generating Features" : isCreating ? "Generating Specification" : "Regenerating Specification"}
+                  {isGeneratingFeatures
+                    ? "Generating Features"
+                    : isCreating
+                    ? "Generating Specification"
+                    : "Regenerating Specification"}
                 </span>
                 {currentPhase && (
                   <span className="text-xs text-muted-foreground/90 leading-tight font-medium">
                     {currentPhase === "initialization" && "Initializing..."}
                     {currentPhase === "setup" && "Setting up tools..."}
-                    {currentPhase === "analysis" && "Analyzing project structure..."}
-                    {currentPhase === "spec_complete" && "Spec created! Generating features..."}
-                    {currentPhase === "feature_generation" && "Creating features from roadmap..."}
+                    {currentPhase === "analysis" &&
+                      "Analyzing project structure..."}
+                    {currentPhase === "spec_complete" &&
+                      "Spec created! Generating features..."}
+                    {currentPhase === "feature_generation" &&
+                      "Creating features from roadmap..."}
                     {currentPhase === "complete" && "Complete!"}
                     {currentPhase === "error" && "Error occurred"}
-                    {!["initialization", "setup", "analysis", "spec_complete", "feature_generation", "complete", "error"].includes(currentPhase) && currentPhase}
+                    {![
+                      "initialization",
+                      "setup",
+                      "analysis",
+                      "spec_complete",
+                      "feature_generation",
+                      "complete",
+                      "error",
+                    ].includes(currentPhase) && currentPhase}
                   </span>
                 )}
               </div>
@@ -833,8 +959,12 @@ export function SpecView() {
             <div className="flex items-center gap-3 px-6 py-3.5 rounded-xl bg-gradient-to-r from-destructive/15 to-destructive/5 border border-destructive/30 shadow-lg backdrop-blur-md">
               <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0" />
               <div className="flex flex-col gap-1 min-w-0">
-                <span className="text-sm font-semibold text-destructive leading-tight tracking-tight">Error</span>
-                <span className="text-xs text-destructive/90 leading-tight font-medium">{errorMessage}</span>
+                <span className="text-sm font-semibold text-destructive leading-tight tracking-tight">
+                  Error
+                </span>
+                <span className="text-xs text-destructive/90 leading-tight font-medium">
+                  {errorMessage}
+                </span>
               </div>
             </div>
           )}
@@ -856,7 +986,13 @@ export function SpecView() {
             <Button
               size="sm"
               onClick={saveSpec}
-              disabled={!hasChanges || isSaving || isCreating || isRegenerating || isGeneratingFeatures}
+              disabled={
+                !hasChanges ||
+                isSaving ||
+                isCreating ||
+                isRegenerating ||
+                isGeneratingFeatures
+              }
               data-testid="save-spec"
             >
               <Save className="w-4 h-4 mr-2" />
@@ -879,8 +1015,8 @@ export function SpecView() {
       </div>
 
       {/* Regenerate Dialog */}
-      <Dialog 
-        open={showRegenerateDialog} 
+      <Dialog
+        open={showRegenerateDialog}
         onOpenChange={(open) => {
           if (!open && !isRegenerating) {
             setShowRegenerateDialog(false);
@@ -891,9 +1027,10 @@ export function SpecView() {
           <DialogHeader>
             <DialogTitle>Regenerate App Specification</DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              We will regenerate your app spec based on a short project definition and the
-              current tech stack found in your project. The agent will analyze your codebase
-              to understand your existing technologies and create a comprehensive specification.
+              We will regenerate your app spec based on a short project
+              definition and the current tech stack found in your project. The
+              agent will analyze your codebase to understand your existing
+              technologies and create a comprehensive specification.
             </DialogDescription>
           </DialogHeader>
 
@@ -903,8 +1040,9 @@ export function SpecView() {
                 Describe your project
               </label>
               <p className="text-xs text-muted-foreground">
-                Provide a clear description of what your app should do. Be as detailed as you
-                want - the more context you provide, the more comprehensive the spec will be.
+                Provide a clear description of what your app should do. Be as
+                detailed as you want - the more context you provide, the more
+                comprehensive the spec will be.
               </p>
               <textarea
                 className="w-full h-40 p-3 rounded-md border border-border bg-background font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
@@ -945,9 +1083,17 @@ export function SpecView() {
               </Button>
               <HotkeyButton
                 onClick={handleRegenerate}
-                disabled={!projectDefinition.trim() || isRegenerating || isGeneratingFeatures}
+                disabled={
+                  !projectDefinition.trim() ||
+                  isRegenerating ||
+                  isGeneratingFeatures
+                }
                 hotkey={{ key: "Enter", cmdCtrl: true }}
-                hotkeyActive={showRegenerateDialog && !isRegenerating && !isGeneratingFeatures}
+                hotkeyActive={
+                  showRegenerateDialog &&
+                  !isRegenerating &&
+                  !isGeneratingFeatures
+                }
               >
                 {isRegenerating ? (
                   <>
@@ -965,7 +1111,6 @@ export function SpecView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }

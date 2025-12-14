@@ -1,14 +1,16 @@
 /**
  * Security utilities for path validation
+ * Note: All permission checks have been disabled to allow unrestricted access
  */
 
 import path from "path";
 
-// Allowed project directories - loaded from environment
+// Allowed project directories - kept for API compatibility
 const allowedPaths = new Set<string>();
 
 /**
  * Initialize allowed paths from environment variable
+ * Note: All paths are now allowed regardless of this setting
  */
 export function initAllowedPaths(): void {
   const dirs = process.env.ALLOWED_PROJECT_DIRS;
@@ -21,13 +23,11 @@ export function initAllowedPaths(): void {
     }
   }
 
-  // Always allow the data directory
   const dataDir = process.env.DATA_DIR;
   if (dataDir) {
     allowedPaths.add(path.resolve(dataDir));
   }
 
-  // Always allow the workspace directory (where projects are created)
   const workspaceDir = process.env.WORKSPACE_DIR;
   if (workspaceDir) {
     allowedPaths.add(path.resolve(workspaceDir));
@@ -35,41 +35,24 @@ export function initAllowedPaths(): void {
 }
 
 /**
- * Add a path to the allowed list
+ * Add a path to the allowed list (no-op, all paths allowed)
  */
 export function addAllowedPath(filePath: string): void {
   allowedPaths.add(path.resolve(filePath));
 }
 
 /**
- * Check if a path is allowed
+ * Check if a path is allowed - always returns true
  */
-export function isPathAllowed(filePath: string): boolean {
-  const resolved = path.resolve(filePath);
-
-  // Check if the path is under any allowed directory
-  for (const allowed of allowedPaths) {
-    if (resolved.startsWith(allowed + path.sep) || resolved === allowed) {
-      return true;
-    }
-  }
-
-  return false;
+export function isPathAllowed(_filePath: string): boolean {
+  return true;
 }
 
 /**
- * Validate a path and throw if not allowed
+ * Validate a path - just resolves the path without checking permissions
  */
 export function validatePath(filePath: string): string {
-  const resolved = path.resolve(filePath);
-
-  if (!isPathAllowed(resolved)) {
-    throw new Error(
-      `Access denied: ${filePath} is not in an allowed directory`
-    );
-  }
-
-  return resolved;
+  return path.resolve(filePath);
 }
 
 /**

@@ -34,6 +34,10 @@ import {
   Sparkles,
   Loader2,
   Terminal,
+  Rocket,
+  Zap,
+  CheckCircle2,
+  ArrowRight,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -78,6 +82,7 @@ import { themeOptions } from "@/config/theme-options";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { SpecRegenerationEvent } from "@/types/electron";
 import { DeleteProjectDialog } from "@/components/views/settings-view/components/delete-project-dialog";
+import { NewProjectModal } from "@/components/new-project-modal";
 import {
   DndContext,
   DragEndEvent,
@@ -92,6 +97,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { getHttpApiClient } from "@/lib/http-api-client";
+import type { StarterTemplate } from "@/lib/templates";
 
 interface NavSection {
   label?: string;
@@ -205,6 +212,8 @@ export function Sidebar() {
     setPreviewTheme,
     theme: globalTheme,
     moveProjectToTrash,
+    specCreatingForProject,
+    setSpecCreatingForProject,
   } = useAppStore();
 
   // Get customizable keyboard shortcuts
@@ -224,16 +233,25 @@ export function Sidebar() {
   // State for running agents count
   const [runningAgentsCount, setRunningAgentsCount] = useState(0);
 
+  // State for new project modal
+  const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+
+  // State for new project onboarding dialog
+  const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectPath, setNewProjectPath] = useState("");
+
   // State for new project setup dialog
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [setupProjectPath, setSetupProjectPath] = useState("");
   const [projectOverview, setProjectOverview] = useState("");
-  const [isCreatingSpec, setIsCreatingSpec] = useState(false);
-  const [creatingSpecProjectPath, setCreatingSpecProjectPath] = useState<
-    string | null
-  >(null);
   const [generateFeatures, setGenerateFeatures] = useState(true);
   const [showSpecIndicator, setShowSpecIndicator] = useState(true);
+
+  // Derive isCreatingSpec from store state
+  const isCreatingSpec = specCreatingForProject !== null;
+  const creatingSpecProjectPath = specCreatingForProject;
 
   // Ref for project search input
   const projectSearchInputRef = useRef<HTMLInputElement>(null);
@@ -324,22 +342,39 @@ export function Sidebar() {
 
     const unsubscribe = api.specRegeneration.onEvent(
       (event: SpecRegenerationEvent) => {
-        console.log("[Sidebar] Spec regeneration event:", event.type);
+        console.log(
+          "[Sidebar] Spec regeneration event:",
+          event.type,
+          "for project:",
+          event.projectPath
+        );
+
+        // Only handle events for the project we're currently setting up
+        if (
+          event.projectPath !== creatingSpecProjectPath &&
+          event.projectPath !== setupProjectPath
+        ) {
+          console.log(
+            "[Sidebar] Ignoring event - not for project being set up"
+          );
+          return;
+        }
 
         if (event.type === "spec_regeneration_complete") {
-          setIsCreatingSpec(false);
-          setCreatingSpecProjectPath(null);
+          setSpecCreatingForProject(null);
           setShowSetupDialog(false);
           setProjectOverview("");
           setSetupProjectPath("");
+          // Clear onboarding state if we came from onboarding
+          setNewProjectName("");
+          setNewProjectPath("");
           toast.success("App specification created", {
             description: "Your project is now set up and ready to go!",
           });
           // Navigate to spec view to show the new spec
           setCurrentView("spec");
         } else if (event.type === "spec_regeneration_error") {
-          setIsCreatingSpec(false);
-          setCreatingSpecProjectPath(null);
+          setSpecCreatingForProject(null);
           toast.error("Failed to create specification", {
             description: event.error,
           });
@@ -350,7 +385,12 @@ export function Sidebar() {
     return () => {
       unsubscribe();
     };
-  }, [setCurrentView]);
+  }, [
+    setCurrentView,
+    creatingSpecProjectPath,
+    setupProjectPath,
+    setSpecCreatingForProject,
+  ]);
 
   // Fetch running agents count function - used for initial load and event-driven updates
   const fetchRunningAgentsCount = useCallback(async () => {
@@ -399,8 +439,8 @@ export function Sidebar() {
   const handleCreateInitialSpec = useCallback(async () => {
     if (!setupProjectPath || !projectOverview.trim()) return;
 
-    setIsCreatingSpec(true);
-    setCreatingSpecProjectPath(setupProjectPath);
+    // Set store state immediately so the loader shows up right away
+    setSpecCreatingForProject(setupProjectPath);
     setShowSpecIndicator(true);
     setShowSetupDialog(false);
 
@@ -408,8 +448,7 @@ export function Sidebar() {
       const api = getElectronAPI();
       if (!api.specRegeneration) {
         toast.error("Spec regeneration not available");
-        setIsCreatingSpec(false);
-        setCreatingSpecProjectPath(null);
+        setSpecCreatingForProject(null);
         return;
       }
       const result = await api.specRegeneration.create(
@@ -420,8 +459,7 @@ export function Sidebar() {
 
       if (!result.success) {
         console.error("[Sidebar] Failed to start spec creation:", result.error);
-        setIsCreatingSpec(false);
-        setCreatingSpecProjectPath(null);
+        setSpecCreatingForProject(null);
         toast.error("Failed to create specification", {
           description: result.error,
         });
@@ -429,23 +467,344 @@ export function Sidebar() {
       // If successful, we'll wait for the events to update the state
     } catch (error) {
       console.error("[Sidebar] Failed to create spec:", error);
-      setIsCreatingSpec(false);
-      setCreatingSpecProjectPath(null);
+      setSpecCreatingForProject(null);
       toast.error("Failed to create specification", {
         description: error instanceof Error ? error.message : "Unknown error",
       });
     }
-  }, [setupProjectPath, projectOverview]);
+  }, [setupProjectPath, projectOverview, setSpecCreatingForProject]);
 
   // Handle skipping setup
   const handleSkipSetup = useCallback(() => {
     setShowSetupDialog(false);
     setProjectOverview("");
     setSetupProjectPath("");
+    // Clear onboarding state if we came from onboarding
+    if (newProjectPath) {
+      setNewProjectName("");
+      setNewProjectPath("");
+    }
     toast.info("Setup skipped", {
       description: "You can set up your app_spec.txt later from the Spec view.",
     });
+  }, [newProjectPath]);
+
+  // Handle onboarding dialog - generate spec
+  const handleOnboardingGenerateSpec = useCallback(() => {
+    setShowOnboardingDialog(false);
+    // Navigate to the setup dialog flow
+    setSetupProjectPath(newProjectPath);
+    setProjectOverview("");
+    setShowSetupDialog(true);
+  }, [newProjectPath]);
+
+  // Handle onboarding dialog - skip
+  const handleOnboardingSkip = useCallback(() => {
+    setShowOnboardingDialog(false);
+    setNewProjectName("");
+    setNewProjectPath("");
+    toast.info(
+      "You can generate your app_spec.txt anytime from the Spec view",
+      {
+        description: "Your project is ready to use!",
+      }
+    );
   }, []);
+
+  /**
+   * Create a blank project with just .automaker directory structure
+   */
+  const handleCreateBlankProject = useCallback(
+    async (projectName: string, parentDir: string) => {
+      setIsCreatingProject(true);
+      try {
+        const api = getElectronAPI();
+        const projectPath = `${parentDir}/${projectName}`;
+
+        // Create project directory
+        const mkdirResult = await api.mkdir(projectPath);
+        if (!mkdirResult.success) {
+          toast.error("Failed to create project directory", {
+            description: mkdirResult.error || "Unknown error occurred",
+          });
+          return;
+        }
+
+        // Initialize .automaker directory with all necessary files
+        const initResult = await initializeProject(projectPath);
+
+        if (!initResult.success) {
+          toast.error("Failed to initialize project", {
+            description: initResult.error || "Unknown error occurred",
+          });
+          return;
+        }
+
+        // Update the app_spec.txt with the project name
+        // Note: Must follow XML format as defined in apps/server/src/lib/app-spec-format.ts
+        await api.writeFile(
+          `${projectPath}/.automaker/app_spec.txt`,
+          `<project_specification>
+  <project_name>${projectName}</project_name>
+
+  <overview>
+    Describe your project here. This file will be analyzed by an AI agent
+    to understand your project structure and tech stack.
+  </overview>
+
+  <technology_stack>
+    <!-- The AI agent will fill this in after analyzing your project -->
+  </technology_stack>
+
+  <core_capabilities>
+    <!-- List core features and capabilities -->
+  </core_capabilities>
+
+  <implemented_features>
+    <!-- The AI agent will populate this based on code analysis -->
+  </implemented_features>
+</project_specification>`
+        );
+
+        const trashedProject = trashedProjects.find(
+          (p) => p.path === projectPath
+        );
+        const effectiveTheme =
+          (trashedProject?.theme as ThemeMode | undefined) ||
+          (currentProject?.theme as ThemeMode | undefined) ||
+          globalTheme;
+        const project = upsertAndSetCurrentProject(
+          projectPath,
+          projectName,
+          effectiveTheme
+        );
+
+        setShowNewProjectModal(false);
+
+        // Show onboarding dialog for new project
+        setNewProjectName(projectName);
+        setNewProjectPath(projectPath);
+        setShowOnboardingDialog(true);
+
+        toast.success("Project created", {
+          description: `Created ${projectName} with .automaker directory`,
+        });
+      } catch (error) {
+        console.error("[Sidebar] Failed to create project:", error);
+        toast.error("Failed to create project", {
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
+      } finally {
+        setIsCreatingProject(false);
+      }
+    },
+    [trashedProjects, currentProject, globalTheme, upsertAndSetCurrentProject]
+  );
+
+  /**
+   * Create a project from a GitHub starter template
+   */
+  const handleCreateFromTemplate = useCallback(
+    async (
+      template: StarterTemplate,
+      projectName: string,
+      parentDir: string
+    ) => {
+      setIsCreatingProject(true);
+      try {
+        const httpClient = getHttpApiClient();
+        const api = getElectronAPI();
+
+        // Clone the template repository
+        const cloneResult = await httpClient.templates.clone(
+          template.repoUrl,
+          projectName,
+          parentDir
+        );
+
+        if (!cloneResult.success || !cloneResult.projectPath) {
+          toast.error("Failed to clone template", {
+            description: cloneResult.error || "Unknown error occurred",
+          });
+          return;
+        }
+
+        const projectPath = cloneResult.projectPath;
+
+        // Initialize .automaker directory with all necessary files
+        const initResult = await initializeProject(projectPath);
+
+        if (!initResult.success) {
+          toast.error("Failed to initialize project", {
+            description: initResult.error || "Unknown error occurred",
+          });
+          return;
+        }
+
+        // Update the app_spec.txt with template-specific info
+        // Note: Must follow XML format as defined in apps/server/src/lib/app-spec-format.ts
+        await api.writeFile(
+          `${projectPath}/.automaker/app_spec.txt`,
+          `<project_specification>
+  <project_name>${projectName}</project_name>
+
+  <overview>
+    This project was created from the "${template.name}" starter template.
+    ${template.description}
+  </overview>
+
+  <technology_stack>
+    ${template.techStack
+      .map((tech) => `<technology>${tech}</technology>`)
+      .join("\n    ")}
+  </technology_stack>
+
+  <core_capabilities>
+    ${template.features
+      .map((feature) => `<capability>${feature}</capability>`)
+      .join("\n    ")}
+  </core_capabilities>
+
+  <implemented_features>
+    <!-- The AI agent will populate this based on code analysis -->
+  </implemented_features>
+</project_specification>`
+        );
+
+        const trashedProject = trashedProjects.find(
+          (p) => p.path === projectPath
+        );
+        const effectiveTheme =
+          (trashedProject?.theme as ThemeMode | undefined) ||
+          (currentProject?.theme as ThemeMode | undefined) ||
+          globalTheme;
+        const project = upsertAndSetCurrentProject(
+          projectPath,
+          projectName,
+          effectiveTheme
+        );
+
+        setShowNewProjectModal(false);
+
+        // Show onboarding dialog for new project
+        setNewProjectName(projectName);
+        setNewProjectPath(projectPath);
+        setShowOnboardingDialog(true);
+
+        toast.success("Project created from template", {
+          description: `Created ${projectName} from ${template.name}`,
+        });
+      } catch (error) {
+        console.error(
+          "[Sidebar] Failed to create project from template:",
+          error
+        );
+        toast.error("Failed to create project", {
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
+      } finally {
+        setIsCreatingProject(false);
+      }
+    },
+    [trashedProjects, currentProject, globalTheme, upsertAndSetCurrentProject]
+  );
+
+  /**
+   * Create a project from a custom GitHub URL
+   */
+  const handleCreateFromCustomUrl = useCallback(
+    async (repoUrl: string, projectName: string, parentDir: string) => {
+      setIsCreatingProject(true);
+      try {
+        const httpClient = getHttpApiClient();
+        const api = getElectronAPI();
+
+        // Clone the repository
+        const cloneResult = await httpClient.templates.clone(
+          repoUrl,
+          projectName,
+          parentDir
+        );
+
+        if (!cloneResult.success || !cloneResult.projectPath) {
+          toast.error("Failed to clone repository", {
+            description: cloneResult.error || "Unknown error occurred",
+          });
+          return;
+        }
+
+        const projectPath = cloneResult.projectPath;
+
+        // Initialize .automaker directory with all necessary files
+        const initResult = await initializeProject(projectPath);
+
+        if (!initResult.success) {
+          toast.error("Failed to initialize project", {
+            description: initResult.error || "Unknown error occurred",
+          });
+          return;
+        }
+
+        // Update the app_spec.txt with basic info
+        // Note: Must follow XML format as defined in apps/server/src/lib/app-spec-format.ts
+        await api.writeFile(
+          `${projectPath}/.automaker/app_spec.txt`,
+          `<project_specification>
+  <project_name>${projectName}</project_name>
+
+  <overview>
+    This project was cloned from ${repoUrl}.
+    The AI agent will analyze the project structure.
+  </overview>
+
+  <technology_stack>
+    <!-- The AI agent will fill this in after analyzing your project -->
+  </technology_stack>
+
+  <core_capabilities>
+    <!-- List core features and capabilities -->
+  </core_capabilities>
+
+  <implemented_features>
+    <!-- The AI agent will populate this based on code analysis -->
+  </implemented_features>
+</project_specification>`
+        );
+
+        const trashedProject = trashedProjects.find(
+          (p) => p.path === projectPath
+        );
+        const effectiveTheme =
+          (trashedProject?.theme as ThemeMode | undefined) ||
+          (currentProject?.theme as ThemeMode | undefined) ||
+          globalTheme;
+        const project = upsertAndSetCurrentProject(
+          projectPath,
+          projectName,
+          effectiveTheme
+        );
+
+        setShowNewProjectModal(false);
+
+        // Show onboarding dialog for new project
+        setNewProjectName(projectName);
+        setNewProjectPath(projectPath);
+        setShowOnboardingDialog(true);
+
+        toast.success("Project created from repository", {
+          description: `Created ${projectName} from ${repoUrl}`,
+        });
+      } catch (error) {
+        console.error("[Sidebar] Failed to create project from URL:", error);
+        toast.error("Failed to create project", {
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
+      } finally {
+        setIsCreatingProject(false);
+      }
+    },
+    [trashedProjects, currentProject, globalTheme, upsertAndSetCurrentProject]
+  );
 
   /**
    * Opens the system folder selection dialog and initializes the selected project.
@@ -840,7 +1199,7 @@ export function Sidebar() {
                 <img
                   src="/logo.png"
                   alt="A"
-                  className="h-[1.3em] w-auto inline-block align-middle group-hover:rotate-12 transition-transform"
+                  className="h-[1.8em] w-auto inline-block align-middle group-hover:rotate-12 transition-transform"
                 />
                 <span className="-ml-0.5">
                   uto<span className="text-brand-500">maker</span>
@@ -868,7 +1227,7 @@ export function Sidebar() {
         {sidebarOpen && (
           <div className="flex items-center gap-2 titlebar-no-drag px-2 mt-3">
             <button
-              onClick={() => setCurrentView("welcome")}
+              onClick={() => setShowNewProjectModal(true)}
               className="group flex items-center justify-center flex-1 px-3 py-2.5 rounded-lg relative overflow-hidden transition-all text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50 border border-sidebar-border"
               title="New Project"
               data-testid="new-project-button"
@@ -1586,27 +1945,112 @@ export function Sidebar() {
         </DialogContent>
       </Dialog>
 
-      {/* Spec Creation Indicator - Bottom Right Toast */}
-      {isCreatingSpec &&
-        showSpecIndicator &&
-        currentProject?.path === creatingSpecProjectPath && (
-          <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-card border border-border rounded-lg shadow-lg p-4 max-w-sm">
-            <Loader2 className="w-5 h-5 animate-spin text-primary flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">Creating App Specification</p>
-              <p className="text-xs text-muted-foreground truncate">
-                Working on your project...
+      {/* New Project Onboarding Dialog */}
+      <Dialog
+        open={showOnboardingDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleOnboardingSkip();
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-brand-500/10 border border-brand-500/20">
+                <Rocket className="w-6 h-6 text-brand-500" />
+              </div>
+              <div>
+                <DialogTitle className="text-2xl">
+                  Welcome to {newProjectName}!
+                </DialogTitle>
+                <DialogDescription className="text-muted-foreground mt-1">
+                  Your new project is ready. Let&apos;s get you started.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-6 py-6">
+            {/* Main explanation */}
+            <div className="space-y-3">
+              <p className="text-sm text-foreground leading-relaxed">
+                Would you like to auto-generate your{" "}
+                <strong>app_spec.txt</strong>? This file helps describe your
+                project and is used to pre-populate your backlog with features
+                to work on.
               </p>
             </div>
-            <button
-              onClick={() => setShowSpecIndicator(false)}
-              className="p-1 hover:bg-muted rounded-md transition-colors flex-shrink-0"
-              aria-label="Dismiss notification"
-            >
-              <X className="w-4 h-4 text-muted-foreground" />
-            </button>
+
+            {/* Benefits list */}
+            <div className="space-y-3 rounded-lg bg-muted/50 border border-border p-4">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-brand-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Pre-populate your backlog
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Automatically generate features based on your project
+                    specification
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Zap className="w-5 h-5 text-brand-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Better AI assistance
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Help AI agents understand your project structure and tech
+                    stack
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <FileText className="w-5 h-5 text-brand-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Project documentation
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Keep a clear record of your project&apos;s capabilities and
+                    features
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Info box */}
+            <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-3">
+              <p className="text-xs text-blue-400 leading-relaxed">
+                <strong className="text-blue-300">Tip:</strong> You can always
+                generate or edit your app_spec.txt later from the Spec Editor in
+                the sidebar.
+              </p>
+            </div>
           </div>
-        )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="ghost"
+              onClick={handleOnboardingSkip}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Skip for now
+            </Button>
+            <Button
+              onClick={handleOnboardingGenerateSpec}
+              className="bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-600 text-white border-0"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Generate App Spec
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Project Confirmation Dialog */}
       <DeleteProjectDialog
@@ -1614,6 +2058,16 @@ export function Sidebar() {
         onOpenChange={setShowDeleteProjectDialog}
         project={currentProject}
         onConfirm={moveProjectToTrash}
+      />
+
+      {/* New Project Modal */}
+      <NewProjectModal
+        open={showNewProjectModal}
+        onOpenChange={setShowNewProjectModal}
+        onCreateBlankProject={handleCreateBlankProject}
+        onCreateFromTemplate={handleCreateFromTemplate}
+        onCreateFromCustomUrl={handleCreateFromCustomUrl}
+        isCreating={isCreatingProject}
       />
     </aside>
   );

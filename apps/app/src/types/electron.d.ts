@@ -243,19 +243,23 @@ export type SpecRegenerationEvent =
   | {
       type: "spec_regeneration_progress";
       content: string;
+      projectPath: string;
     }
   | {
       type: "spec_regeneration_tool";
       tool: string;
       input: unknown;
+      projectPath: string;
     }
   | {
       type: "spec_regeneration_complete";
       message: string;
+      projectPath: string;
     }
   | {
       type: "spec_regeneration_error";
       error: string;
+      projectPath: string;
     };
 
 export interface SpecRegenerationAPI {
