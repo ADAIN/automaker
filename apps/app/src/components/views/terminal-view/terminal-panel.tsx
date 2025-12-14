@@ -59,6 +59,8 @@ export function TerminalPanel({
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastShortcutTimeRef = useRef<number>(0);
+  const resizeDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const focusHandlerRef = useRef<{ dispose: () => void } | null>(null);
   const [isTerminalReady, setIsTerminalReady] = useState(false);
   const [shellName, setShellName] = useState("shell");
 
@@ -167,17 +169,28 @@ export function TerminalPanel({
         console.warn("[Terminal] WebGL addon not available, falling back to canvas");
       }
 
-      // Fit terminal to container
-      setTimeout(() => {
-        fitAddon.fit();
-      }, 0);
+      // Fit terminal to container using requestAnimationFrame for better timing
+      requestAnimationFrame(() => {
+        if (fitAddon && terminalRef.current) {
+          const rect = terminalRef.current.getBoundingClientRect();
+          // Only fit if container has valid dimensions
+          if (rect.width >= 100 && rect.height >= 50) {
+            try {
+              fitAddon.fit();
+            } catch (err) {
+              console.error("[Terminal] Initial fit error:", err);
+            }
+          }
+        }
+      });
 
       xtermRef.current = terminal;
       fitAddonRef.current = fitAddon;
       setIsTerminalReady(true);
 
       // Handle focus - use ref to avoid re-running effect
-      terminal.onData(() => {
+      // Store disposer to prevent memory leak
+      focusHandlerRef.current = terminal.onData(() => {
         onFocusRef.current();
       });
 
@@ -236,6 +249,19 @@ export function TerminalPanel({
     // Cleanup
     return () => {
       mounted = false;
+
+      // Dispose focus handler to prevent memory leak
+      if (focusHandlerRef.current) {
+        focusHandlerRef.current.dispose();
+        focusHandlerRef.current = null;
+      }
+
+      // Clear resize debounce timer
+      if (resizeDebounceRef.current) {
+        clearTimeout(resizeDebounceRef.current);
+        resizeDebounceRef.current = null;
+      }
+
       if (xtermRef.current) {
         xtermRef.current.dispose();
         xtermRef.current = null;
@@ -273,6 +299,8 @@ export function TerminalPanel({
               terminal.write(msg.data);
               break;
             case "scrollback":
+              // Clear terminal before replaying scrollback to prevent duplicates on reconnection
+              terminal.clear();
               // Replay scrollback buffer (previous terminal output)
               if (msg.data) {
                 terminal.write(msg.data);
@@ -343,17 +371,40 @@ export function TerminalPanel({
     };
   }, [sessionId, authToken, wsUrl, isTerminalReady]);
 
-  // Handle resize
+  // Handle resize with debouncing and validation
   const handleResize = useCallback(() => {
-    if (fitAddonRef.current && xtermRef.current) {
-      fitAddonRef.current.fit();
-      const { cols, rows } = xtermRef.current;
-
-      // Send resize to server
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: "resize", cols, rows }));
-      }
+    // Clear any pending resize
+    if (resizeDebounceRef.current) {
+      clearTimeout(resizeDebounceRef.current);
     }
+
+    // Debounce resize operations to prevent race conditions
+    resizeDebounceRef.current = setTimeout(() => {
+      if (!fitAddonRef.current || !xtermRef.current || !terminalRef.current) return;
+
+      // Validate minimum dimensions before resizing
+      const container = terminalRef.current;
+      const rect = container.getBoundingClientRect();
+      const MIN_WIDTH = 100;
+      const MIN_HEIGHT = 50;
+
+      if (rect.width < MIN_WIDTH || rect.height < MIN_HEIGHT) {
+        console.log("[Terminal] Container too small to resize:", rect.width, "x", rect.height);
+        return;
+      }
+
+      try {
+        fitAddonRef.current.fit();
+        const { cols, rows } = xtermRef.current;
+
+        // Send resize to server
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: "resize", cols, rows }));
+        }
+      } catch (err) {
+        console.error("[Terminal] Resize error:", err);
+      }
+    }, 100); // 100ms debounce
   }, []);
 
   // Resize observer
@@ -376,12 +427,12 @@ export function TerminalPanel({
     };
   }, [handleResize]);
 
-  // Focus terminal when becoming active
+  // Focus terminal when becoming active or when terminal becomes ready
   useEffect(() => {
-    if (isActive && xtermRef.current) {
+    if (isActive && isTerminalReady && xtermRef.current) {
       xtermRef.current.focus();
     }
-  }, [isActive]);
+  }, [isActive, isTerminalReady]);
 
   // Update terminal font size when it changes
   useEffect(() => {

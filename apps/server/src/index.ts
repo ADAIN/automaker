@@ -197,6 +197,8 @@ wss.on("connection", (ws: WebSocket) => {
 
 // Track WebSocket connections per session
 const terminalConnections: Map<string, Set<WebSocket>> = new Map();
+// Track last resize dimensions per session to deduplicate resize messages
+const lastResizeDimensions: Map<string, { cols: number; rows: number }> = new Map();
 
 // Terminal WebSocket connection handler
 terminalWss.on(
@@ -248,7 +250,29 @@ terminalWss.on(
     }
     terminalConnections.get(sessionId)!.add(ws);
 
-    // Subscribe to terminal data
+    // Send initial connection success FIRST
+    ws.send(
+      JSON.stringify({
+        type: "connected",
+        sessionId,
+        shell: session.shell,
+        cwd: session.cwd,
+      })
+    );
+
+    // Send scrollback buffer BEFORE subscribing to prevent race condition
+    // This ensures data isn't sent twice (once in scrollback, once via subscription)
+    const scrollback = terminalService.getScrollback(sessionId);
+    if (scrollback && scrollback.length > 0) {
+      ws.send(
+        JSON.stringify({
+          type: "scrollback",
+          data: scrollback,
+        })
+      );
+    }
+
+    // NOW subscribe to terminal data (after scrollback is sent)
     const unsubscribeData = terminalService.onData((sid, data) => {
       if (sid === sessionId && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "data", data }));
@@ -275,9 +299,22 @@ terminalWss.on(
             break;
 
           case "resize":
-            // Resize terminal
+            // Resize terminal with deduplication
             if (msg.cols && msg.rows) {
-              terminalService.resize(sessionId, msg.cols, msg.rows);
+              // Check if dimensions are different from last resize
+              const lastDimensions = lastResizeDimensions.get(sessionId);
+              if (
+                !lastDimensions ||
+                lastDimensions.cols !== msg.cols ||
+                lastDimensions.rows !== msg.rows
+              ) {
+                // Only resize if dimensions changed
+                terminalService.resize(sessionId, msg.cols, msg.rows);
+                lastResizeDimensions.set(sessionId, {
+                  cols: msg.cols,
+                  rows: msg.rows,
+                });
+              }
             }
             break;
 
@@ -307,6 +344,8 @@ terminalWss.on(
         connections.delete(ws);
         if (connections.size === 0) {
           terminalConnections.delete(sessionId);
+          // Clean up resize dimensions tracking when session has no more connections
+          lastResizeDimensions.delete(sessionId);
         }
       }
     });
@@ -316,27 +355,6 @@ terminalWss.on(
       unsubscribeData();
       unsubscribeExit();
     });
-
-    // Send initial connection success
-    ws.send(
-      JSON.stringify({
-        type: "connected",
-        sessionId,
-        shell: session.shell,
-        cwd: session.cwd,
-      })
-    );
-
-    // Send scrollback buffer to replay previous output
-    const scrollback = terminalService.getScrollback(sessionId);
-    if (scrollback && scrollback.length > 0) {
-      ws.send(
-        JSON.stringify({
-          type: "scrollback",
-          data: scrollback,
-        })
-      );
-    }
   }
 );
 

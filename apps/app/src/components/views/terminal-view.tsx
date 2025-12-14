@@ -305,6 +305,15 @@ export function TerminalView() {
 
   // Create terminal in new tab
   const createTerminalInNewTab = async () => {
+    // Debounce: prevent rapid terminal creation
+    const now = Date.now();
+    if (now - lastCreateTimeRef.current < CREATE_COOLDOWN_MS || isCreatingRef.current) {
+      console.log("[Terminal] Debounced terminal tab creation");
+      return;
+    }
+    lastCreateTimeRef.current = now;
+    isCreatingRef.current = true;
+
     const tabId = addTerminalTab();
     try {
       const headers: Record<string, string> = {
@@ -332,6 +341,8 @@ export function TerminalView() {
       }
     } catch (err) {
       console.error("[Terminal] Create session error:", err);
+    } finally {
+      isCreatingRef.current = false;
     }
   };
 
@@ -465,7 +476,7 @@ export function TerminalView() {
                   }
                 />
               )}
-              <Panel defaultSize={panelSize} minSize={15}>
+              <Panel defaultSize={panelSize} minSize={25}>
                 {renderPanelContent(panel)}
               </Panel>
             </React.Fragment>
