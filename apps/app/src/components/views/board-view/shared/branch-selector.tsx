@@ -10,6 +10,7 @@ interface BranchSelectorProps {
   branchName: string;
   onBranchNameChange: (branchName: string) => void;
   branchSuggestions: string[];
+  branchCardCounts?: Record<string, number>; // Map of branch name to unarchived card count
   currentBranch?: string;
   disabled?: boolean;
   testIdPrefix?: string;
@@ -21,6 +22,7 @@ export function BranchSelector({
   branchName,
   onBranchNameChange,
   branchSuggestions,
+  branchCardCounts,
   currentBranch,
   disabled = false,
   testIdPrefix = "branch",
@@ -69,6 +71,7 @@ export function BranchSelector({
             value={branchName}
             onChange={onBranchNameChange}
             branches={branchSuggestions}
+            branchCardCounts={branchCardCounts}
             placeholder="Select or create branch..."
             data-testid={`${testIdPrefix}-input`}
             disabled={disabled}

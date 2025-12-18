@@ -9,6 +9,7 @@ import { WorktreeActionsDropdown } from "./worktree-actions-dropdown";
 
 interface WorktreeTabProps {
   worktree: WorktreeInfo;
+  cardCount?: number; // Number of unarchived cards for this branch
   isSelected: boolean;
   isRunning: boolean;
   isActivating: boolean;
@@ -44,6 +45,7 @@ interface WorktreeTabProps {
 
 export function WorktreeTab({
   worktree,
+  cardCount,
   isSelected,
   isRunning,
   isActivating,
@@ -97,9 +99,9 @@ export function WorktreeTab({
               <RefreshCw className="w-3 h-3 animate-spin" />
             )}
             {worktree.branch}
-            {worktree.hasChanges && (
+            {cardCount !== undefined && cardCount > 0 && (
               <span className="inline-flex items-center justify-center h-4 min-w-[1rem] px-1 text-[10px] font-medium rounded bg-background/80 text-foreground border border-border">
-                {worktree.changedFilesCount}
+                {cardCount}
               </span>
             )}
           </Button>
@@ -140,9 +142,9 @@ export function WorktreeTab({
             <RefreshCw className="w-3 h-3 animate-spin" />
           )}
           {worktree.branch}
-          {worktree.hasChanges && (
+          {cardCount !== undefined && cardCount > 0 && (
             <span className="inline-flex items-center justify-center h-4 min-w-[1rem] px-1 text-[10px] font-medium rounded bg-background/80 text-foreground border border-border">
-              {worktree.changedFilesCount}
+              {cardCount}
             </span>
           )}
         </Button>

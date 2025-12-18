@@ -8,6 +8,7 @@ interface BranchAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
   branches: string[];
+  branchCardCounts?: Record<string, number>; // Map of branch name to unarchived card count
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -19,6 +20,7 @@ export function BranchAutocomplete({
   value,
   onChange,
   branches,
+  branchCardCounts,
   placeholder = "Select a branch...",
   className,
   disabled = false,
@@ -28,12 +30,22 @@ export function BranchAutocomplete({
   // Always include "main" at the top of suggestions
   const branchOptions: AutocompleteOption[] = React.useMemo(() => {
     const branchSet = new Set(["main", ...branches]);
-    return Array.from(branchSet).map((branch) => ({
-      value: branch,
-      label: branch,
-      badge: branch === "main" ? "default" : undefined,
-    }));
-  }, [branches]);
+    return Array.from(branchSet).map((branch) => {
+      const cardCount = branchCardCounts?.[branch];
+      // Show card count if available, otherwise show "default" for main branch only
+      const badge = cardCount !== undefined 
+        ? String(cardCount) 
+        : branch === "main" 
+          ? "default" 
+          : undefined;
+      
+      return {
+        value: branch,
+        label: branch,
+        badge,
+      };
+    });
+  }, [branches, branchCardCounts]);
 
   return (
     <Autocomplete

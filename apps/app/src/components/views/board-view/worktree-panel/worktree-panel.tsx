@@ -24,6 +24,7 @@ export function WorktreePanel({
   onRemovedWorktrees,
   runningFeatureIds = [],
   features = [],
+  branchCardCounts,
   refreshTrigger = 0,
 }: WorktreePanelProps) {
   const {
@@ -110,43 +111,47 @@ export function WorktreePanel({
       <span className="text-sm text-muted-foreground mr-2">Branch:</span>
 
       <div className="flex items-center gap-1 flex-wrap">
-        {worktrees.map((worktree) => (
-          <WorktreeTab
-            key={worktree.path}
-            worktree={worktree}
-            isSelected={isWorktreeSelected(worktree)}
-            isRunning={hasRunningFeatures(worktree)}
-            isActivating={isActivating}
-            isDevServerRunning={isDevServerRunning(worktree)}
-            devServerInfo={getDevServerInfo(worktree)}
-            defaultEditorName={defaultEditorName}
-            branches={branches}
-            filteredBranches={filteredBranches}
-            branchFilter={branchFilter}
-            isLoadingBranches={isLoadingBranches}
-            isSwitching={isSwitching}
-            isPulling={isPulling}
-            isPushing={isPushing}
-            isStartingDevServer={isStartingDevServer}
-            aheadCount={aheadCount}
-            behindCount={behindCount}
-            onSelectWorktree={handleSelectWorktree}
-            onBranchDropdownOpenChange={handleBranchDropdownOpenChange(worktree)}
-            onActionsDropdownOpenChange={handleActionsDropdownOpenChange(worktree)}
-            onBranchFilterChange={setBranchFilter}
-            onSwitchBranch={handleSwitchBranch}
-            onCreateBranch={onCreateBranch}
-            onPull={handlePull}
-            onPush={handlePush}
-            onOpenInEditor={handleOpenInEditor}
-            onCommit={onCommit}
-            onCreatePR={onCreatePR}
-            onDeleteWorktree={onDeleteWorktree}
-            onStartDevServer={handleStartDevServer}
-            onStopDevServer={handleStopDevServer}
-            onOpenDevServerUrl={handleOpenDevServerUrl}
-          />
-        ))}
+        {worktrees.map((worktree) => {
+          const cardCount = branchCardCounts?.[worktree.branch];
+          return (
+            <WorktreeTab
+              key={worktree.path}
+              worktree={worktree}
+              cardCount={cardCount}
+              isSelected={isWorktreeSelected(worktree)}
+              isRunning={hasRunningFeatures(worktree)}
+              isActivating={isActivating}
+              isDevServerRunning={isDevServerRunning(worktree)}
+              devServerInfo={getDevServerInfo(worktree)}
+              defaultEditorName={defaultEditorName}
+              branches={branches}
+              filteredBranches={filteredBranches}
+              branchFilter={branchFilter}
+              isLoadingBranches={isLoadingBranches}
+              isSwitching={isSwitching}
+              isPulling={isPulling}
+              isPushing={isPushing}
+              isStartingDevServer={isStartingDevServer}
+              aheadCount={aheadCount}
+              behindCount={behindCount}
+              onSelectWorktree={handleSelectWorktree}
+              onBranchDropdownOpenChange={handleBranchDropdownOpenChange(worktree)}
+              onActionsDropdownOpenChange={handleActionsDropdownOpenChange(worktree)}
+              onBranchFilterChange={setBranchFilter}
+              onSwitchBranch={handleSwitchBranch}
+              onCreateBranch={onCreateBranch}
+              onPull={handlePull}
+              onPush={handlePush}
+              onOpenInEditor={handleOpenInEditor}
+              onCommit={onCommit}
+              onCreatePR={onCreatePR}
+              onDeleteWorktree={onDeleteWorktree}
+              onStartDevServer={handleStartDevServer}
+              onStopDevServer={handleStopDevServer}
+              onOpenDevServerUrl={handleOpenDevServerUrl}
+            />
+          );
+        })}
 
         <Button
           variant="ghost"

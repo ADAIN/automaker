@@ -77,6 +77,7 @@ interface EditFeatureDialogProps {
   ) => void;
   categorySuggestions: string[];
   branchSuggestions: string[];
+  branchCardCounts?: Record<string, number>; // Map of branch name to unarchived card count
   currentBranch?: string;
   isMaximized: boolean;
   showProfilesOnly: boolean;
@@ -90,6 +91,7 @@ export function EditFeatureDialog({
   onUpdate,
   categorySuggestions,
   branchSuggestions,
+  branchCardCounts,
   currentBranch,
   isMaximized,
   showProfilesOnly,
@@ -389,6 +391,7 @@ export function EditFeatureDialog({
                   })
                 }
                 branchSuggestions={branchSuggestions}
+                branchCardCounts={branchCardCounts}
                 currentBranch={currentBranch}
                 disabled={editingFeature.status !== "backlog"}
                 testIdPrefix="edit-feature"

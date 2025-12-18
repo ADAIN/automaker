@@ -270,6 +270,21 @@ export function BoardView() {
     fetchBranches();
   }, [currentProject, worktreeRefreshKey]);
 
+  // Calculate unarchived card counts per branch
+  const branchCardCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    // Count unarchived features (status !== "completed") per branch
+    hookFeatures.forEach((feature) => {
+      if (feature.status !== "completed") {
+        const branch = feature.branchName || "main";
+        counts[branch] = (counts[branch] || 0) + 1;
+      }
+    });
+    
+    return counts;
+  }, [hookFeatures]);
+
   // Custom collision detection that prioritizes columns over cards
   const collisionDetectionStrategy = useCallback((args: any) => {
     // First, check if pointer is within a column
@@ -833,6 +848,7 @@ export function BoardView() {
         }}
         onRemovedWorktrees={handleRemovedWorktrees}
         runningFeatureIds={runningAutoTasks}
+        branchCardCounts={branchCardCounts}
         features={hookFeatures.map((f) => ({
           id: f.id,
           branchName: f.branchName,
@@ -929,6 +945,7 @@ export function BoardView() {
         onAdd={handleAddFeature}
         categorySuggestions={categorySuggestions}
         branchSuggestions={branchSuggestions}
+        branchCardCounts={branchCardCounts}
         defaultSkipTests={defaultSkipTests}
         defaultBranch={selectedWorktreeBranch}
         currentBranch={currentWorktreeBranch || undefined}
@@ -944,6 +961,7 @@ export function BoardView() {
         onUpdate={handleUpdateFeature}
         categorySuggestions={categorySuggestions}
         branchSuggestions={branchSuggestions}
+        branchCardCounts={branchCardCounts}
         currentBranch={currentWorktreeBranch || undefined}
         isMaximized={isMaximized}
         showProfilesOnly={showProfilesOnly}
