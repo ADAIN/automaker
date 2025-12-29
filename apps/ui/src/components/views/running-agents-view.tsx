@@ -97,13 +97,8 @@ export function RunningAgentsView() {
   );
 
   const handleViewLogs = useCallback((agent: RunningAgent) => {
-    // Set the current project context for the modal
-    const project = projects.find((p) => p.path === agent.projectPath);
-    if (project) {
-      (window as any).__currentProject = project;
-    }
     setSelectedAgent(agent);
-  }, [projects]);
+  }, []);
 
   if (loading) {
     return (
@@ -232,6 +227,7 @@ export function RunningAgentsView() {
         <AgentOutputModal
           open={true}
           onClose={() => setSelectedAgent(null)}
+          projectPath={selectedAgent.projectPath}
           featureDescription={selectedAgent.description || selectedAgent.title || selectedAgent.featureId}
           featureId={selectedAgent.featureId}
           featureStatus="running"

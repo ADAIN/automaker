@@ -14,7 +14,6 @@ describe('running-agents routes', () => {
 
     mockAutoModeService = {
       getRunningAgents: vi.fn(),
-      getStatus: vi.fn(),
     };
 
     const context = createMockExpressContext();
