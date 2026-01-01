@@ -16,7 +16,7 @@ import type {
   ResolvedBacklogPlanPrompts,
   ResolvedEnhancementPrompts,
 } from '@automaker/types';
-import { STATIC_PORT, SERVER_PORT } from '@automaker/platform';
+import { STATIC_PORT, SERVER_PORT } from '@automaker/types';
 
 /**
  * ========================================================================

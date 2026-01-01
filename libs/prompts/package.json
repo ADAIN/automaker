@@ -22,7 +22,6 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@automaker/platform": "1.0.0",
     "@automaker/types": "1.0.0"
   },
   "devDependencies": {
