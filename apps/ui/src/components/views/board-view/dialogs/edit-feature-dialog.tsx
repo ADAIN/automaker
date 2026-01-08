@@ -41,9 +41,11 @@ import {
   useAppStore,
   PlanningMode,
 } from '@/store/app-store';
+import type { ReasoningEffort } from '@automaker/types';
 import {
   ModelSelector,
   ThinkingLevelSelector,
+  ReasoningEffortSelector,
   ProfileQuickSelect,
   TestingTabContent,
   PrioritySelector,
@@ -60,7 +62,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { DescriptionHistoryEntry } from '@automaker/types';
 import { DependencyTreeDialog } from './dependency-tree-dialog';
-import { isCursorModel, PROVIDER_PREFIXES } from '@automaker/types';
+import { isCursorModel, PROVIDER_PREFIXES, supportsReasoningEffort } from '@automaker/types';
 
 const logger = createLogger('EditFeatureDialog');
 
@@ -76,6 +78,7 @@ interface EditFeatureDialogProps {
       skipTests: boolean;
       model: ModelAlias;
       thinkingLevel: ThinkingLevel;
+      reasoningEffort: ReasoningEffort;
       imagePaths: DescriptionImagePath[];
       textFilePaths: DescriptionTextFilePath[];
       branchName: string; // Can be empty string to use current branch
@@ -180,6 +183,9 @@ export function EditFeatureDialog({
     const normalizedThinking: ThinkingLevel = modelSupportsThinking(selectedModel)
       ? (editingFeature.thinkingLevel ?? 'none')
       : 'none';
+    const normalizedReasoning: ReasoningEffort = supportsReasoningEffort(selectedModel)
+      ? (editingFeature.reasoningEffort ?? 'none')
+      : 'none';
 
     // Use current branch if toggle is on
     // If currentBranch is provided (non-primary worktree), use it
@@ -195,6 +201,7 @@ export function EditFeatureDialog({
       skipTests: editingFeature.skipTests ?? false,
       model: selectedModel,
       thinkingLevel: normalizedThinking,
+      reasoningEffort: normalizedReasoning,
       imagePaths: editingFeature.imagePaths ?? [],
       textFilePaths: editingFeature.textFilePaths ?? [],
       branchName: finalBranchName,
@@ -233,15 +240,17 @@ export function EditFeatureDialog({
     if (!editingFeature) return;
     // For Cursor models, thinking is handled by the model itself
     // For Claude models, check if it supports extended thinking
+    // For Codex models, use reasoning effort instead
     const isCursor = isCursorModel(model);
+    const supportsThinking = modelSupportsThinking(model);
+    const supportsReasoning = supportsReasoningEffort(model);
+
     setEditingFeature({
       ...editingFeature,
       model: model as ModelAlias,
-      thinkingLevel: isCursor
-        ? 'none'
-        : modelSupportsThinking(model)
-          ? editingFeature.thinkingLevel
-          : 'none',
+      thinkingLevel:
+        isCursor || !supportsThinking ? 'none' : (editingFeature.thinkingLevel ?? 'none'),
+      reasoningEffort: !supportsReasoning ? 'none' : (editingFeature.reasoningEffort ?? 'none'),
     });
   };
 
@@ -311,6 +320,9 @@ export function EditFeatureDialog({
   const isCurrentModelCursor = isCursorModel(editingFeature?.model as string);
   const editModelAllowsThinking =
     !isCurrentModelCursor && modelSupportsThinking(editingFeature?.model);
+
+  // Codex models that support reasoning effort - show reasoning selector
+  const editModelAllowsReasoning = supportsReasoningEffort(editingFeature?.model || '');
 
   if (!editingFeature) {
     return null;
@@ -632,6 +644,18 @@ export function EditFeatureDialog({
                       })
                     }
                     testIdPrefix="edit-thinking-level"
+                  />
+                )}
+                {editModelAllowsReasoning && (
+                  <ReasoningEffortSelector
+                    selectedEffort={editingFeature.reasoningEffort ?? 'none'}
+                    onEffortSelect={(effort) =>
+                      setEditingFeature({
+                        ...editingFeature,
+                        reasoningEffort: effort,
+                      })
+                    }
+                    testIdPrefix="edit-reasoning-effort"
                   />
                 )}
               </>

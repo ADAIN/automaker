@@ -41,9 +41,12 @@ import {
   PlanningMode,
   Feature,
 } from '@/store/app-store';
+import type { ReasoningEffort } from '@automaker/types';
+import { codexModelHasThinking, supportsReasoningEffort } from '@automaker/types';
 import {
   ModelSelector,
   ThinkingLevelSelector,
+  ReasoningEffortSelector,
   ProfileQuickSelect,
   TestingTabContent,
   PrioritySelector,
@@ -78,6 +81,7 @@ type FeatureData = {
   skipTests: boolean;
   model: AgentModel;
   thinkingLevel: ThinkingLevel;
+  reasoningEffort: ReasoningEffort;
   branchName: string; // Can be empty string to use current branch
   priority: number;
   planningMode: PlanningMode;
@@ -134,6 +138,7 @@ export function AddFeatureDialog({
     skipTests: false,
     model: 'opus' as ModelAlias,
     thinkingLevel: 'none' as ThinkingLevel,
+    reasoningEffort: 'none' as ReasoningEffort,
     branchName: '',
     priority: 2 as number, // Default to medium priority
   });
@@ -220,6 +225,9 @@ export function AddFeatureDialog({
     const normalizedThinking = modelSupportsThinking(selectedModel)
       ? newFeature.thinkingLevel
       : 'none';
+    const normalizedReasoning = supportsReasoningEffort(selectedModel)
+      ? newFeature.reasoningEffort
+      : 'none';
 
     // Use current branch if toggle is on
     // If currentBranch is provided (non-primary worktree), use it
@@ -260,6 +268,7 @@ export function AddFeatureDialog({
       skipTests: newFeature.skipTests,
       model: selectedModel,
       thinkingLevel: normalizedThinking,
+      reasoningEffort: normalizedReasoning,
       branchName: finalBranchName,
       priority: newFeature.priority,
       planningMode,
@@ -281,6 +290,7 @@ export function AddFeatureDialog({
       model: 'opus',
       priority: 2,
       thinkingLevel: 'none',
+      reasoningEffort: 'none',
       branchName: '',
     });
     setUseCurrentBranch(true);
@@ -393,6 +403,9 @@ export function AddFeatureDialog({
   const isCurrentModelCursor = isCursorModel(newFeature.model);
   const newModelAllowsThinking =
     !isCurrentModelCursor && modelSupportsThinking(newFeature.model || 'sonnet');
+
+  // Codex models that support reasoning effort - show reasoning selector
+  const newModelAllowsReasoning = supportsReasoningEffort(newFeature.model || '');
 
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
@@ -616,6 +629,14 @@ export function AddFeatureDialog({
                     selectedLevel={newFeature.thinkingLevel}
                     onLevelSelect={(level) =>
                       setNewFeature({ ...newFeature, thinkingLevel: level })
+                    }
+                  />
+                )}
+                {newModelAllowsReasoning && (
+                  <ReasoningEffortSelector
+                    selectedEffort={newFeature.reasoningEffort}
+                    onEffortSelect={(effort) =>
+                      setNewFeature({ ...newFeature, reasoningEffort: effort })
                     }
                   />
                 )}

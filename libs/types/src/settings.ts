@@ -11,6 +11,7 @@ import type { CursorModelId } from './cursor-models.js';
 import { CURSOR_MODEL_MAP, getAllCursorModelIds } from './cursor-models.js';
 import type { PromptCustomization } from './prompts.js';
 import type { CodexSandboxMode, CodexApprovalPolicy } from './codex.js';
+import type { ReasoningEffort } from './provider.js';
 
 // Re-export ModelAlias for convenience
 export type { ModelAlias };
@@ -108,14 +109,18 @@ const DEFAULT_CODEX_ADDITIONAL_DIRS: string[] = [];
 /**
  * PhaseModelEntry - Configuration for a single phase model
  *
- * Encapsulates both the model selection and optional thinking level
- * for Claude models. Cursor models handle thinking internally.
+ * Encapsulates the model selection and optional reasoning/thinking capabilities:
+ * - Claude models: Use thinkingLevel for extended thinking
+ * - Codex models: Use reasoningEffort for reasoning intensity
+ * - Cursor models: Handle thinking internally
  */
 export interface PhaseModelEntry {
-  /** The model to use (Claude alias or Cursor model ID) */
-  model: ModelAlias | CursorModelId;
+  /** The model to use (Claude alias, Cursor model ID, or Codex model ID) */
+  model: ModelAlias | CursorModelId | CodexModelId;
   /** Extended thinking level (only applies to Claude models, defaults to 'none') */
   thinkingLevel?: ThinkingLevel;
+  /** Reasoning effort level (only applies to Codex models, defaults to 'none') */
+  reasoningEffort?: ReasoningEffort;
 }
 
 /**

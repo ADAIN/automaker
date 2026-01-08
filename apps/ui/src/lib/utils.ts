@@ -9,13 +9,14 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Determine if the current model supports extended thinking controls
+ * Note: This is for Claude's "thinking levels" only, not Codex's "reasoning effort"
  */
 export function modelSupportsThinking(_model?: ModelAlias | string): boolean {
   if (!_model) return true;
 
-  // Check if it's a Codex model with thinking support
+  // Codex models don't support Claude thinking levels - they use reasoning effort instead
   if (_model.startsWith('gpt-') && _model in CODEX_MODEL_CONFIG_MAP) {
-    return codexModelHasThinking(_model as any);
+    return false;
   }
 
   // All Claude models support thinking

@@ -3,6 +3,7 @@
  */
 
 import type { PlanningMode, ThinkingLevel } from './settings.js';
+import type { ReasoningEffort } from './provider.js';
 
 /**
  * A single entry in the description history
@@ -49,6 +50,7 @@ export interface Feature {
   branchName?: string; // Name of the feature branch (undefined = use current worktree)
   skipTests?: boolean;
   thinkingLevel?: ThinkingLevel;
+  reasoningEffort?: ReasoningEffort;
   planningMode?: PlanningMode;
   requirePlanApproval?: boolean;
   planSpec?: {

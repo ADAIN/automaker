@@ -8,6 +8,7 @@ import {
   PlanningMode,
   useAppStore,
 } from '@/store/app-store';
+import type { ReasoningEffort } from '@automaker/types';
 import { FeatureImagePath as DescriptionImagePath } from '@/components/ui/description-image-dropzone';
 import { getElectronAPI } from '@/lib/electron';
 import { toast } from 'sonner';
@@ -222,6 +223,7 @@ export function useBoardActions({
         skipTests: boolean;
         model: ModelAlias;
         thinkingLevel: ThinkingLevel;
+        reasoningEffort: ReasoningEffort;
         imagePaths: DescriptionImagePath[];
         branchName: string;
         priority: number;

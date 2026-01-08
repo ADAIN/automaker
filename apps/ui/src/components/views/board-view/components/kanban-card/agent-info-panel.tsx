@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { useEffect, useState } from 'react';
 import { Feature, ThinkingLevel, useAppStore } from '@/store/app-store';
+import type { ReasoningEffort } from '@automaker/types';
+import { getProviderFromModel } from '@/lib/utils';
 import {
   AgentTaskInfo,
   parseAgentContext,
@@ -35,6 +37,22 @@ function formatThinkingLevel(level: ThinkingLevel | undefined): string {
     ultrathink: 'Ultra',
   };
   return labels[level];
+}
+
+/**
+ * Formats reasoning effort for compact display
+ */
+function formatReasoningEffort(effort: ReasoningEffort | undefined): string {
+  if (!effort || effort === 'none') return '';
+  const labels: Record<ReasoningEffort, string> = {
+    none: '',
+    minimal: 'Min',
+    low: 'Low',
+    medium: 'Med',
+    high: 'High',
+    xhigh: 'XHigh',
+  };
+  return labels[effort];
 }
 
 interface AgentInfoPanelProps {
@@ -106,6 +124,10 @@ export function AgentInfoPanel({
   }, [feature.id, feature.status, contextContent, isCurrentAutoTask]);
   // Model/Preset Info for Backlog Cards
   if (showAgentInfo && feature.status === 'backlog') {
+    const provider = getProviderFromModel(feature.model);
+    const isCodex = provider === 'codex';
+    const isClaude = provider === 'claude';
+
     return (
       <div className="mb-3 space-y-2 overflow-hidden">
         <div className="flex items-center gap-2 text-[11px] flex-wrap">
@@ -116,11 +138,19 @@ export function AgentInfoPanel({
             })()}
             <span className="font-medium">{formatModelName(feature.model ?? DEFAULT_MODEL)}</span>
           </div>
-          {feature.thinkingLevel && feature.thinkingLevel !== 'none' ? (
+          {isClaude && feature.thinkingLevel && feature.thinkingLevel !== 'none' ? (
             <div className="flex items-center gap-1 text-purple-400">
               <Brain className="w-3 h-3" />
               <span className="font-medium">
                 {formatThinkingLevel(feature.thinkingLevel as ThinkingLevel)}
+              </span>
+            </div>
+          ) : null}
+          {isCodex && feature.reasoningEffort && feature.reasoningEffort !== 'none' ? (
+            <div className="flex items-center gap-1 text-purple-400">
+              <Brain className="w-3 h-3" />
+              <span className="font-medium">
+                {formatReasoningEffort(feature.reasoningEffort as ReasoningEffort)}
               </span>
             </div>
           ) : null}

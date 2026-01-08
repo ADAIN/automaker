@@ -45,8 +45,8 @@ export function ModelSelector({
       // Switch to Cursor's default model (from global settings)
       onModelSelect(`${PROVIDER_PREFIXES.cursor}${cursorDefaultModel}`);
     } else if (provider === 'codex' && selectedProvider !== 'codex') {
-      // Switch to Codex's default model (gpt-5.2)
-      onModelSelect('gpt-5.2');
+      // Switch to Codex's default model (gpt-5.2-codex)
+      onModelSelect('gpt-5.2-codex');
     } else if (provider === 'claude' && selectedProvider !== 'claude') {
       // Switch to Claude's default model
       onModelSelect('sonnet');

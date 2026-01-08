@@ -6,7 +6,7 @@
 import path from 'path';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
-import type { ExecuteOptions, ThinkingLevel } from '@automaker/types';
+import type { ExecuteOptions, ThinkingLevel, ReasoningEffort } from '@automaker/types';
 import {
   readImageAsBase64,
   buildPromptWithImages,
@@ -56,6 +56,7 @@ interface Session {
   workingDirectory: string;
   model?: string;
   thinkingLevel?: ThinkingLevel; // Thinking level for Claude models
+  reasoningEffort?: ReasoningEffort; // Reasoning effort for Codex models
   sdkSessionId?: string; // Claude SDK session ID for conversation continuity
   promptQueue: QueuedPrompt[]; // Queue of prompts to auto-run after current task
 }
@@ -145,6 +146,7 @@ export class AgentService {
     imagePaths,
     model,
     thinkingLevel,
+    reasoningEffort,
   }: {
     sessionId: string;
     message: string;
@@ -152,6 +154,7 @@ export class AgentService {
     imagePaths?: string[];
     model?: string;
     thinkingLevel?: ThinkingLevel;
+    reasoningEffort?: ReasoningEffort;
   }) {
     const session = this.sessions.get(sessionId);
     if (!session) {
@@ -164,13 +167,16 @@ export class AgentService {
       throw new Error('Agent is already processing a message');
     }
 
-    // Update session model and thinking level if provided
+    // Update session model, thinking level, and reasoning effort if provided
     if (model) {
       session.model = model;
       await this.updateSession(sessionId, { model });
     }
     if (thinkingLevel !== undefined) {
       session.thinkingLevel = thinkingLevel;
+    }
+    if (reasoningEffort !== undefined) {
+      session.reasoningEffort = reasoningEffort;
     }
 
     // Validate vision support before processing images
@@ -265,8 +271,9 @@ export class AgentService {
         : baseSystemPrompt;
 
       // Build SDK options using centralized configuration
-      // Use thinking level from request, or fall back to session's stored thinking level
+      // Use thinking level and reasoning effort from request, or fall back to session's stored values
       const effectiveThinkingLevel = thinkingLevel ?? session.thinkingLevel;
+      const effectiveReasoningEffort = reasoningEffort ?? session.reasoningEffort;
       const sdkOptions = createChatOptions({
         cwd: effectiveWorkDir,
         model: model,
@@ -299,6 +306,8 @@ export class AgentService {
         settingSources: sdkOptions.settingSources,
         sdkSessionId: session.sdkSessionId, // Pass SDK session ID for resuming
         mcpServers: Object.keys(mcpServers).length > 0 ? mcpServers : undefined, // Pass MCP servers configuration
+        thinkingLevel: effectiveThinkingLevel, // Pass thinking level for Claude models
+        reasoningEffort: effectiveReasoningEffort, // Pass reasoning effort for Codex models
       };
 
       // Build prompt content with images
