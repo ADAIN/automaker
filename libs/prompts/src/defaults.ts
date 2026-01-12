@@ -15,6 +15,7 @@ import type {
   ResolvedAgentPrompts,
   ResolvedBacklogPlanPrompts,
   ResolvedEnhancementPrompts,
+  ResolvedCommitMessagePrompts,
 } from '@automaker/types';
 import { STATIC_PORT, SERVER_PORT } from '@automaker/types';
 
@@ -431,6 +432,40 @@ export const DEFAULT_ENHANCEMENT_PROMPTS: ResolvedEnhancementPrompts = {
 
 /**
  * ========================================================================
+ * COMMIT MESSAGE PROMPTS
+ * ========================================================================
+ */
+
+export const DEFAULT_COMMIT_MESSAGE_SYSTEM_PROMPT = `You are a git commit message generator. Your task is to create a clear, concise commit message based on the git diff provided.
+
+Rules:
+- Output ONLY the commit message, nothing else
+- First line should be a short summary (50 chars or less) in imperative mood
+- Start with a conventional commit type if appropriate (feat:, fix:, refactor:, docs:, chore:, style:, test:, perf:, ci:, build:)
+- Keep it concise and descriptive
+- Focus on WHAT changed and WHY (if clear from the diff), not HOW
+- No quotes, backticks, or extra formatting
+- If there are multiple changes, provide a brief summary on the first line
+
+Examples:
+- feat: Add dark mode toggle to settings
+- fix: Resolve login validation edge case
+- refactor: Extract user authentication logic
+- docs: Update installation instructions
+- chore: Update dependencies to latest versions
+- style: Fix inconsistent indentation in components
+- test: Add unit tests for user service
+- perf: Optimize database query for user lookup`;
+
+/**
+ * Default Commit Message prompts (for AI commit message generation)
+ */
+export const DEFAULT_COMMIT_MESSAGE_PROMPTS: ResolvedCommitMessagePrompts = {
+  systemPrompt: DEFAULT_COMMIT_MESSAGE_SYSTEM_PROMPT,
+};
+
+/**
+ * ========================================================================
  * COMBINED DEFAULTS
  * ========================================================================
  */
@@ -443,4 +478,5 @@ export const DEFAULT_PROMPTS = {
   agent: DEFAULT_AGENT_PROMPTS,
   backlogPlan: DEFAULT_BACKLOG_PLAN_PROMPTS,
   enhancement: DEFAULT_ENHANCEMENT_PROMPTS,
+  commitMessage: DEFAULT_COMMIT_MESSAGE_PROMPTS,
 } as const;

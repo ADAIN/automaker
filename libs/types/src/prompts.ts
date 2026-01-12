@@ -95,6 +95,16 @@ export interface EnhancementPrompts {
 }
 
 /**
+ * CommitMessagePrompts - Customizable prompts for AI commit message generation
+ *
+ * Controls how the AI generates git commit messages from diffs.
+ */
+export interface CommitMessagePrompts {
+  /** System prompt for generating commit messages */
+  systemPrompt?: CustomPrompt;
+}
+
+/**
  * PromptCustomization - Complete set of customizable prompts
  *
  * All fields are optional. Undefined values fall back to built-in defaults.
@@ -112,6 +122,9 @@ export interface PromptCustomization {
 
   /** Enhancement prompts (feature description improvement) */
   enhancement?: EnhancementPrompts;
+
+  /** Commit message prompts (AI-generated commit messages) */
+  commitMessage?: CommitMessagePrompts;
 }
 
 /**
@@ -122,6 +135,7 @@ export const DEFAULT_PROMPT_CUSTOMIZATION: PromptCustomization = {
   agent: {},
   backlogPlan: {},
   enhancement: {},
+  commitMessage: {},
 };
 
 /**
@@ -154,4 +168,8 @@ export interface ResolvedEnhancementPrompts {
   simplifySystemPrompt: string;
   acceptanceSystemPrompt: string;
   uxReviewerSystemPrompt: string;
+}
+
+export interface ResolvedCommitMessagePrompts {
+  systemPrompt: string;
 }
