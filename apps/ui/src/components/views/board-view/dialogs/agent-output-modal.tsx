@@ -380,11 +380,11 @@ export function AgentOutputModal({
         <TaskProgressPanel
           featureId={featureId}
           projectPath={projectPath}
-          className="flex-shrink-0 mx-1"
+          className="flex-shrink-0 mx-3 my-2"
         />
 
         {effectiveViewMode === 'changes' ? (
-          <div className="flex-1 min-h-0 sm:min-h-[400px] sm:max-h-[60vh] overflow-y-auto scrollbar-visible">
+          <div className="flex-1 min-h-0 sm:min-h-[200px] sm:max-h-[60vh] overflow-y-auto scrollbar-visible">
             {projectPath ? (
               <GitDiffPanel
                 projectPath={projectPath}
@@ -401,7 +401,7 @@ export function AgentOutputModal({
             )}
           </div>
         ) : effectiveViewMode === 'summary' && summary ? (
-          <div className="flex-1 min-h-0 sm:min-h-[400px] sm:max-h-[60vh] overflow-y-auto bg-card border border-border/50 rounded-lg p-4 scrollbar-visible">
+          <div className="flex-1 min-h-0 sm:min-h-[200px] sm:max-h-[60vh] overflow-y-auto bg-card border border-border/50 rounded-lg p-4 scrollbar-visible">
             <Markdown>{summary}</Markdown>
           </div>
         ) : (
@@ -409,7 +409,7 @@ export function AgentOutputModal({
             <div
               ref={scrollRef}
               onScroll={handleScroll}
-              className="flex-1 min-h-0 sm:min-h-[400px] sm:max-h-[60vh] overflow-y-auto bg-zinc-950 rounded-lg p-4 font-mono text-xs scrollbar-visible"
+              className="flex-1 min-h-0 sm:min-h-[200px] sm:max-h-[60vh] overflow-y-auto bg-zinc-950 rounded-lg p-4 font-mono text-xs scrollbar-visible"
             >
               {isLoading && !output ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
