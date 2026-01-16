@@ -20,6 +20,11 @@ import { cn } from '@/lib/utils';
 import type { IssuesStateFilter } from '../types';
 import { ISSUES_STATE_FILTER_OPTIONS } from '../types';
 
+/** Maximum number of labels to display before showing "+N more" in normal layout */
+const VISIBLE_LABELS_LIMIT = 3;
+/** Maximum number of labels to display before showing "+N more" in compact layout */
+const VISIBLE_LABELS_LIMIT_COMPACT = 2;
+
 interface IssuesFilterControlsProps {
   /** Current state filter value */
   stateFilter: IssuesStateFilter;
@@ -156,21 +161,27 @@ export function IssuesFilterControls({
       {/* Selected Labels Display - shown on separate row */}
       {hasSelectedLabels && (
         <div className="flex items-center gap-1 flex-wrap">
-          {selectedLabels.slice(0, compact ? 2 : 3).map((label) => (
-            <Badge
-              key={label}
-              variant="outline"
-              size="sm"
-              className="gap-1 cursor-pointer hover:bg-destructive/10 hover:border-destructive/50"
-              onClick={() => handleLabelToggle(label)}
-            >
-              {label}
-              <X className="h-2.5 w-2.5" />
-            </Badge>
-          ))}
-          {selectedLabels.length > (compact ? 2 : 3) && (
+          {selectedLabels
+            .slice(0, compact ? VISIBLE_LABELS_LIMIT_COMPACT : VISIBLE_LABELS_LIMIT)
+            .map((label) => (
+              <Badge
+                key={label}
+                variant="outline"
+                size="sm"
+                className="gap-1 cursor-pointer hover:bg-destructive/10 hover:border-destructive/50"
+                onClick={() => handleLabelToggle(label)}
+              >
+                {label}
+                <X className="h-2.5 w-2.5" />
+              </Badge>
+            ))}
+          {selectedLabels.length >
+            (compact ? VISIBLE_LABELS_LIMIT_COMPACT : VISIBLE_LABELS_LIMIT) && (
             <Badge variant="muted" size="sm">
-              +{selectedLabels.length - (compact ? 2 : 3)} more
+              +
+              {selectedLabels.length -
+                (compact ? VISIBLE_LABELS_LIMIT_COMPACT : VISIBLE_LABELS_LIMIT)}{' '}
+              more
             </Badge>
           )}
         </div>

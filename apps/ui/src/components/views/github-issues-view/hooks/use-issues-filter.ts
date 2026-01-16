@@ -200,8 +200,9 @@ export function useIssuesFilter(
     // Normalize search query for case-insensitive matching
     const normalizedQuery = searchQuery.toLowerCase().trim();
 
-    // Filter issues based on all criteria
-    const matchedIssueNumbers = new Set<number>();
+    // Filter issues based on all criteria - return matched issues directly
+    // This eliminates the redundant O(n) filtering operation in the consuming component
+    const matchedIssues: GitHubIssue[] = [];
 
     for (const issue of issues) {
       // All conditions must be true for a match
@@ -214,17 +215,17 @@ export function useIssuesFilter(
         matchesValidationStatus(issue, validationStatusFilter, cachedValidations);
 
       if (matchesAllFilters) {
-        matchedIssueNumbers.add(issue.number);
+        matchedIssues.push(issue);
       }
     }
 
     return {
-      matchedIssueNumbers,
+      matchedIssues,
       availableLabels,
       availableAssignees,
       availableMilestones,
       hasActiveFilter,
-      matchedCount: matchedIssueNumbers.size,
+      matchedCount: matchedIssues.length,
     };
   }, [
     issues,

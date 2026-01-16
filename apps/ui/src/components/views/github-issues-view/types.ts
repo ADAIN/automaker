@@ -72,8 +72,8 @@ export interface IssuesFilterState {
  * Result of applying filters to the issues list
  */
 export interface IssuesFilterResult {
-  /** Set of issue numbers that match the current filters */
-  matchedIssueNumbers: Set<number>;
+  /** Array of GitHubIssue objects that match the current filters */
+  matchedIssues: GitHubIssue[];
   /** Available labels from all issues (for filter dropdown population) */
   availableLabels: string[];
   /** Available assignees from all issues (for filter dropdown population) */

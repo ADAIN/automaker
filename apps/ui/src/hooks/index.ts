@@ -2,7 +2,6 @@ export { useAutoMode } from './use-auto-mode';
 export { useBoardBackgroundSettings } from './use-board-background-settings';
 export { useElectronAgent } from './use-electron-agent';
 export { useGuidedPrompts } from './use-guided-prompts';
-export { useIssuesFilter } from '@/components/views/github-issues-view/hooks/use-issues-filter';
 export { useKeyboardShortcuts } from './use-keyboard-shortcuts';
 export { useMessageQueue } from './use-message-queue';
 export { useOSDetection, type OperatingSystem, type OSDetectionResult } from './use-os-detection';

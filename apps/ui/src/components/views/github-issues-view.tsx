@@ -56,19 +56,23 @@ export function GitHubIssuesView() {
   // Combine all issues for filtering
   const allIssues = useMemo(() => [...openIssues, ...closedIssues], [openIssues, closedIssues]);
 
-  // Apply filter to issues
+  // Apply filter to issues - now returns matched issues directly for better performance
   const filterResult = useIssuesFilter(allIssues, filterState, cachedValidations);
 
-  // Filter issues based on matched results
-  const filteredOpenIssues = useMemo(
-    () => openIssues.filter((issue) => filterResult.matchedIssueNumbers.has(issue.number)),
-    [openIssues, filterResult.matchedIssueNumbers]
-  );
-
-  const filteredClosedIssues = useMemo(
-    () => closedIssues.filter((issue) => filterResult.matchedIssueNumbers.has(issue.number)),
-    [closedIssues, filterResult.matchedIssueNumbers]
-  );
+  // Separate filtered issues by state - this is O(n) but now only done once
+  // since filterResult.matchedIssues already contains the filtered issues
+  const { filteredOpenIssues, filteredClosedIssues } = useMemo(() => {
+    const open: typeof openIssues = [];
+    const closed: typeof closedIssues = [];
+    for (const issue of filterResult.matchedIssues) {
+      if (issue.state.toLowerCase() === 'open') {
+        open.push(issue);
+      } else {
+        closed.push(issue);
+      }
+    }
+    return { filteredOpenIssues: open, filteredClosedIssues: closed };
+  }, [filterResult.matchedIssues]);
 
   // Filter state change handlers
   const handleStateFilterChange = useCallback((stateFilter: IssuesStateFilter) => {
