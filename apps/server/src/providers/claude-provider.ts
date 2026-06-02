@@ -12,6 +12,7 @@ import { getClaudeAuthIndicators } from '@automaker/platform';
 import {
   getThinkingTokenBudget,
   validateBareModelId,
+  CLAUDE_CATALOG_MODELS,
   type ClaudeApiProfile,
   type ClaudeCompatibleProvider,
   type Credentials,
@@ -372,70 +373,22 @@ export class ClaudeProvider extends BaseProvider {
    * Get available Claude models
    */
   getAvailableModels(): ModelDefinition[] {
-    const models = [
-      {
-        id: 'claude-opus-4-6',
-        name: 'Claude Opus 4.6',
-        modelString: 'claude-opus-4-6',
+    // Derived from the shared Claude model registry (single source of truth).
+    return CLAUDE_CATALOG_MODELS.map(
+      (m): ModelDefinition => ({
+        id: m.id,
+        name: m.label,
+        modelString: m.id,
         provider: 'anthropic',
-        description: 'Most capable Claude model with adaptive thinking',
-        contextWindow: 200000,
-        maxOutputTokens: 128000,
+        description: m.description,
+        contextWindow: m.contextWindow,
+        maxOutputTokens: m.maxOutputTokens,
         supportsVision: true,
         supportsTools: true,
-        tier: 'premium' as const,
-        default: true,
-      },
-      {
-        id: 'claude-sonnet-4-6',
-        name: 'Claude Sonnet 4.6',
-        modelString: 'claude-sonnet-4-6',
-        provider: 'anthropic',
-        description: 'Balanced performance and cost with enhanced reasoning',
-        contextWindow: 200000,
-        maxOutputTokens: 64000,
-        supportsVision: true,
-        supportsTools: true,
-        tier: 'standard' as const,
-      },
-      {
-        id: 'claude-sonnet-4-20250514',
-        name: 'Claude Sonnet 4',
-        modelString: 'claude-sonnet-4-20250514',
-        provider: 'anthropic',
-        description: 'Balanced performance and cost',
-        contextWindow: 200000,
-        maxOutputTokens: 16000,
-        supportsVision: true,
-        supportsTools: true,
-        tier: 'standard' as const,
-      },
-      {
-        id: 'claude-3-5-sonnet-20241022',
-        name: 'Claude 3.5 Sonnet',
-        modelString: 'claude-3-5-sonnet-20241022',
-        provider: 'anthropic',
-        description: 'Fast and capable',
-        contextWindow: 200000,
-        maxOutputTokens: 8000,
-        supportsVision: true,
-        supportsTools: true,
-        tier: 'standard' as const,
-      },
-      {
-        id: 'claude-haiku-4-5-20251001',
-        name: 'Claude Haiku 4.5',
-        modelString: 'claude-haiku-4-5-20251001',
-        provider: 'anthropic',
-        description: 'Fastest Claude model',
-        contextWindow: 200000,
-        maxOutputTokens: 8000,
-        supportsVision: true,
-        supportsTools: true,
-        tier: 'basic' as const,
-      },
-    ] satisfies ModelDefinition[];
-    return models;
+        tier: m.tier,
+        ...(m.isDefault ? { default: true } : {}),
+      })
+    );
   }
 
   /**

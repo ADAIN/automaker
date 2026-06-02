@@ -969,7 +969,7 @@ describe('settings-service.ts', () => {
       expect(settings.phaseModels.validationModel).toEqual({ model: 'claude-opus' });
       // Other fields should use defaults (canonical IDs) - specGenerationModel includes thinkingLevel from DEFAULT_PHASE_MODELS
       expect(settings.phaseModels.specGenerationModel).toEqual({
-        model: 'claude-opus',
+        model: 'claude-opus-4-8',
         thinkingLevel: 'adaptive',
       });
     });
@@ -989,7 +989,7 @@ describe('settings-service.ts', () => {
       expect(settings.phaseModels.enhancementModel).toEqual({ model: 'claude-sonnet' });
       expect(settings.phaseModels.fileDescriptionModel).toEqual({ model: 'claude-haiku' });
       expect(settings.phaseModels.specGenerationModel).toEqual({
-        model: 'claude-opus',
+        model: 'claude-opus-4-8',
         thinkingLevel: 'adaptive',
       });
     });

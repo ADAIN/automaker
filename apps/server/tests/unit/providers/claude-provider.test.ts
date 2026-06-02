@@ -371,10 +371,28 @@ describe('claude-provider.ts', () => {
   });
 
   describe('getAvailableModels', () => {
-    it('should return 5 Claude models', () => {
+    it('should return 7 Claude models', () => {
       const models = provider.getAvailableModels();
 
-      expect(models).toHaveLength(5);
+      expect(models).toHaveLength(7);
+    });
+
+    it('should include Claude Opus 4.8', () => {
+      const models = provider.getAvailableModels();
+
+      const opus = models.find((m) => m.id === 'claude-opus-4-8');
+      expect(opus).toBeDefined();
+      expect(opus?.name).toBe('Claude Opus 4.8');
+      expect(opus?.provider).toBe('anthropic');
+    });
+
+    it('should include Claude Opus 4.7', () => {
+      const models = provider.getAvailableModels();
+
+      const opus = models.find((m) => m.id === 'claude-opus-4-7');
+      expect(opus).toBeDefined();
+      expect(opus?.name).toBe('Claude Opus 4.7');
+      expect(opus?.provider).toBe('anthropic');
     });
 
     it('should include Claude Opus 4.6', () => {
@@ -408,11 +426,14 @@ describe('claude-provider.ts', () => {
       expect(haiku).toBeDefined();
     });
 
-    it('should mark Opus as default', () => {
+    it('should mark Opus 4.8 as default', () => {
       const models = provider.getAvailableModels();
 
-      const opus = models.find((m) => m.id === 'claude-opus-4-6');
+      const opus = models.find((m) => m.id === 'claude-opus-4-8');
       expect(opus?.default).toBe(true);
+      // Older Opus versions remain available but are not the default
+      expect(models.find((m) => m.id === 'claude-opus-4-7')?.default).toBeFalsy();
+      expect(models.find((m) => m.id === 'claude-opus-4-6')?.default).toBeFalsy();
     });
 
     it('should all support vision and tools', () => {

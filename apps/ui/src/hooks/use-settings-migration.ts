@@ -35,6 +35,7 @@ import {
   DEFAULT_PHASE_MODELS,
   getAllOpencodeModelIds,
   getAllCursorModelIds,
+  getDefaultClaudeModelId,
   migrateCursorModelIds,
   migratePhaseModelEntry,
   type GlobalSettings,
@@ -769,7 +770,7 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     defaultPlanningMode: settings.defaultPlanningMode ?? 'skip',
     defaultRequirePlanApproval: settings.defaultRequirePlanApproval ?? false,
     defaultFeatureModel: migratePhaseModelEntry(settings.defaultFeatureModel) ?? {
-      model: 'claude-opus',
+      model: getDefaultClaudeModelId(),
       thinkingLevel: 'adaptive',
     },
     muteDoneSound: settings.muteDoneSound ?? false,

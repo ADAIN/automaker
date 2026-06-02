@@ -10,6 +10,7 @@ import type { ReasoningEffort } from './provider.js';
 import type { CursorModelId } from './cursor-models.js';
 import type { AgentModel, CodexModelId } from './model.js';
 import { CODEX_MODEL_MAP } from './model.js';
+import { CLAUDE_PICKER_MODELS, getClaudeModelLabel } from './claude-models.js';
 import { GEMINI_MODEL_MAP, type GeminiModelId } from './gemini-models.js';
 
 /**
@@ -43,29 +44,13 @@ export interface ThinkingLevelOption {
  *
  * Ordered from fastest/cheapest (Haiku) to most capable (Opus).
  */
-export const CLAUDE_MODELS: ModelOption[] = [
-  {
-    id: 'haiku',
-    label: 'Claude Haiku',
-    description: 'Fast and efficient for simple tasks.',
-    badge: 'Speed',
-    provider: 'claude',
-  },
-  {
-    id: 'sonnet',
-    label: 'Claude Sonnet',
-    description: 'Balanced performance with strong reasoning.',
-    badge: 'Balanced',
-    provider: 'claude',
-  },
-  {
-    id: 'opus',
-    label: 'Claude Opus',
-    description: 'Most capable model for complex work.',
-    badge: 'Premium',
-    provider: 'claude',
-  },
-];
+export const CLAUDE_MODELS: ModelOption[] = CLAUDE_PICKER_MODELS.map((m) => ({
+  id: (m.pickerId ?? m.id) as ModelOption['id'],
+  label: m.label,
+  description: m.description,
+  badge: m.badge,
+  provider: 'claude',
+}));
 
 /**
  * Codex model options with full metadata for UI display
@@ -257,15 +242,11 @@ export const REASONING_EFFORT_LABELS: Record<ReasoningEffort, string> = {
  * ```
  */
 export function getModelDisplayName(model: ModelAlias | string): string {
+  // Claude models are resolved from the central registry (single source of truth).
+  const claudeLabel = getClaudeModelLabel(model);
+  if (claudeLabel) return claudeLabel;
+
   const displayNames: Record<string, string> = {
-    haiku: 'Claude Haiku',
-    sonnet: 'Claude Sonnet',
-    opus: 'Claude Opus',
-    'claude-haiku': 'Claude Haiku',
-    'claude-sonnet': 'Claude Sonnet',
-    'claude-opus': 'Claude Opus',
-    'claude-sonnet-4-6': 'Claude Sonnet 4.6',
-    'claude-opus-4-6': 'Claude Opus 4.6',
     [CODEX_MODEL_MAP.gpt53Codex]: 'GPT-5.3-Codex',
     [CODEX_MODEL_MAP.gpt53CodexSpark]: 'GPT-5.3-Codex-Spark',
     [CODEX_MODEL_MAP.gpt52Codex]: 'GPT-5.2-Codex',

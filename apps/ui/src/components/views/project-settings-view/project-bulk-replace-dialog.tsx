@@ -25,7 +25,11 @@ import type {
   ClaudeCompatibleProvider,
   ClaudeModelAlias,
 } from '@automaker/types';
-import { DEFAULT_PHASE_MODELS, DEFAULT_GLOBAL_SETTINGS } from '@automaker/types';
+import {
+  DEFAULT_PHASE_MODELS,
+  DEFAULT_GLOBAL_SETTINGS,
+  getClaudeModelFamily,
+} from '@automaker/types';
 
 interface ProjectBulkReplaceDialogProps {
   open: boolean;
@@ -110,10 +114,10 @@ export function ProjectBulkReplaceDialog({
 
   // Get the Claude model alias from a PhaseModelEntry
   const getClaudeModelAlias = (entry: PhaseModelEntry): ClaudeModelAlias => {
-    // Check if model string directly matches a Claude alias
-    if (entry.model === 'haiku' || entry.model === 'claude-haiku') return 'haiku';
-    if (entry.model === 'sonnet' || entry.model === 'claude-sonnet') return 'sonnet';
-    if (entry.model === 'opus' || entry.model === 'claude-opus') return 'opus';
+    // Native Claude model → resolve its family from the registry
+    // (handles aliases and versioned IDs: claude-opus / claude-opus-4-6 / claude-opus-4-8).
+    const family = getClaudeModelFamily(entry.model);
+    if (family) return family;
 
     // If it's a provider model, look up the mapping
     if (entry.providerId) {

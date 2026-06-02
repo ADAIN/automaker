@@ -5,6 +5,7 @@ import {
   OPENCODE_MODELS as OPENCODE_MODEL_CONFIGS,
   GEMINI_MODEL_MAP,
   COPILOT_MODEL_MAP,
+  CLAUDE_PICKER_MODELS,
 } from '@automaker/types';
 import { Brain, Zap, Scale, Cpu, Rocket, Sparkles } from 'lucide-react';
 import {
@@ -29,29 +30,18 @@ export type ModelOption = {
  * Claude models with canonical prefixed IDs
  * UI displays short labels but stores full canonical IDs
  */
-export const CLAUDE_MODELS: ModelOption[] = [
-  {
-    id: 'claude-haiku', // Canonical prefixed ID
-    label: 'Claude Haiku',
-    description: 'Fast and efficient for simple tasks.',
-    badge: 'Speed',
-    provider: 'claude',
-  },
-  {
-    id: 'claude-sonnet', // Canonical prefixed ID
-    label: 'Claude Sonnet',
-    description: 'Balanced performance with strong reasoning.',
-    badge: 'Balanced',
-    provider: 'claude',
-  },
-  {
-    id: 'claude-opus', // Canonical prefixed ID
-    label: 'Claude Opus',
-    description: 'Most capable model for complex work.',
-    badge: 'Premium',
-    provider: 'claude',
-  },
-];
+/**
+ * Claude models for the picker, derived from the shared registry
+ * (`CLAUDE_PICKER_MODELS` in @automaker/types). To add/change a Claude model,
+ * edit the registry — not this file.
+ */
+export const CLAUDE_MODELS: ModelOption[] = CLAUDE_PICKER_MODELS.map((m) => ({
+  id: m.pickerId ?? m.id,
+  label: m.label,
+  description: m.description,
+  badge: m.badge,
+  provider: 'claude' as ModelProvider,
+}));
 
 /**
  * Cursor models derived from CURSOR_MODEL_MAP

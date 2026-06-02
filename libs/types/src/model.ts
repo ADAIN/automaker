@@ -4,6 +4,7 @@
 import type { CursorModelId } from './cursor-models.js';
 import type { OpencodeModelId } from './opencode-models.js';
 import type { GeminiModelId } from './gemini-models.js';
+import { getDefaultClaudeModelId } from './claude-models.js';
 
 /**
  * Canonical Claude model IDs with provider prefix
@@ -127,7 +128,8 @@ export function getAllCodexModelIds(): CodexModelId[] {
  * Uses canonical prefixed IDs for consistent routing.
  */
 export const DEFAULT_MODELS = {
-  claude: 'claude-opus-4-6',
+  // Derived from the Claude model registry (the entry flagged `isDefault`).
+  claude: getDefaultClaudeModelId(),
   cursor: 'cursor-auto', // Cursor's recommended default (with prefix)
   codex: CODEX_MODEL_MAP.gpt53Codex, // GPT-5.3-Codex is the latest frontier agentic coding model
 } as const;

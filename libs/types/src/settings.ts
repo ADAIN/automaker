@@ -7,6 +7,7 @@
  */
 
 import type { ModelAlias, ModelId } from './model.js';
+import { getDefaultClaudeModelId, isClaudeAdaptiveThinkingModel } from './claude-models.js';
 import type { CursorModelId } from './cursor-models.js';
 import { CURSOR_MODEL_MAP, getAllCursorModelIds } from './cursor-models.js';
 import type { OpencodeModelId } from './opencode-models.js';
@@ -318,7 +319,7 @@ export const THINKING_TOKEN_BUDGET: Record<ThinkingLevel, number | undefined> = 
   medium: 10000, // Light reasoning
   high: 16000, // Complex tasks (recommended starting point)
   ultrathink: 32000, // Maximum safe (above this risks timeouts)
-  adaptive: undefined, // Adaptive thinking (Opus 4.6) - SDK handles token allocation
+  adaptive: undefined, // Adaptive thinking (Opus 4.6+) - SDK handles token allocation
 };
 
 /**
@@ -334,12 +335,13 @@ export function getThinkingTokenBudget(level: ThinkingLevel | undefined): number
  * Adaptive thinking models let the SDK decide token allocation automatically.
  */
 export function isAdaptiveThinkingModel(model: string): boolean {
-  return model.includes('opus-4-6') || model === 'claude-opus';
+  // Delegated to the Claude model registry (derives from `thinkingMode`).
+  return isClaudeAdaptiveThinkingModel(model);
 }
 
 /**
  * Get the available thinking levels for a given model.
- * - Opus 4.6: Only 'none' and 'adaptive' (SDK handles token allocation)
+ * - Opus 4.6+: Only 'none' and 'adaptive' (SDK handles token allocation)
  * - Others: Full range of manual thinking levels
  */
 export function getThinkingLevelsForModel(model: string): ThinkingLevel[] {
@@ -1799,8 +1801,8 @@ export const DEFAULT_PHASE_MODELS: PhaseModelConfig = {
   // Validation - use smart models for accuracy
   validationModel: { model: 'claude-sonnet' },
 
-  // Generation - use powerful models for quality
-  specGenerationModel: { model: 'claude-opus', thinkingLevel: 'adaptive' },
+  // Generation - use powerful models for quality (default Claude model from registry)
+  specGenerationModel: { model: getDefaultClaudeModelId(), thinkingLevel: 'adaptive' },
   featureGenerationModel: { model: 'claude-sonnet' },
   backlogPlanningModel: { model: 'claude-sonnet' },
   projectAnalysisModel: { model: 'claude-sonnet' },
@@ -1868,7 +1870,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   useWorktrees: true,
   defaultPlanningMode: 'skip',
   defaultRequirePlanApproval: false,
-  defaultFeatureModel: { model: 'claude-opus', thinkingLevel: 'adaptive' }, // Use canonical ID with adaptive thinking
+  defaultFeatureModel: { model: getDefaultClaudeModelId(), thinkingLevel: 'adaptive' }, // Default Claude model from registry, with adaptive thinking
   muteDoneSound: false,
   disableSplashScreen: false,
   defaultSortNewestCardOnTop: false,

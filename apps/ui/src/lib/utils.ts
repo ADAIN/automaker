@@ -5,6 +5,7 @@ import {
   normalizeThinkingLevelForModel,
   normalizeReasoningEffortForModel,
   LEGACY_CLAUDE_ALIAS_MAP,
+  getClaudeModelLabel,
   type PhaseModelEntry,
 } from '@automaker/types';
 
@@ -104,19 +105,11 @@ export function getProviderFromModel(model?: string): ModelProvider {
  * Handles both aliases (e.g., "sonnet") and full model IDs (e.g., "claude-sonnet-4-20250514")
  */
 export function getModelDisplayName(model: ModelAlias | string): string {
+  // Claude models resolve from the central registry (single source of truth).
+  const claudeLabel = getClaudeModelLabel(model);
+  if (claudeLabel) return claudeLabel;
+
   const displayNames: Record<string, string> = {
-    // Claude aliases
-    haiku: 'Claude Haiku',
-    sonnet: 'Claude Sonnet',
-    opus: 'Claude Opus',
-    // Claude canonical IDs (without version suffix)
-    'claude-haiku': 'Claude Haiku',
-    'claude-sonnet': 'Claude Sonnet',
-    'claude-opus': 'Claude Opus',
-    // Claude full model IDs (returned by server)
-    'claude-haiku-4-5': 'Claude Haiku',
-    'claude-sonnet-4-20250514': 'Claude Sonnet',
-    'claude-opus-4-6': 'Claude Opus',
     // Codex models
     'codex-gpt-5.2': 'GPT-5.2',
     'codex-gpt-5.1-codex-max': 'GPT-5.1 Codex Max',

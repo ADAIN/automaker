@@ -3,7 +3,11 @@
  * Extracts useful information from agent context files for display in kanban cards
  */
 
-import type { ClaudeCompatibleProvider } from '@automaker/types';
+import {
+  getDefaultClaudeModelId,
+  getClaudeShortLabel,
+  type ClaudeCompatibleProvider,
+} from '@automaker/types';
 
 export interface AgentTaskInfo {
   // Task list extracted from TodoWrite tool calls
@@ -29,7 +33,7 @@ export interface AgentTaskInfo {
 /**
  * Default model used by the feature executor
  */
-export const DEFAULT_MODEL = 'claude-opus-4-6';
+export const DEFAULT_MODEL = getDefaultClaudeModelId();
 
 /**
  * Options for formatting model names
@@ -65,12 +69,10 @@ export function formatModelName(model: string, options?: FormatModelNameOptions)
     }
   }
 
-  // Claude models
-  if (model.includes('opus-4-6') || model === 'claude-opus') return 'Opus 4.6';
-  if (model.includes('opus')) return 'Opus 4.5';
-  if (model.includes('sonnet-4-6') || model === 'claude-sonnet') return 'Sonnet 4.6';
-  if (model.includes('sonnet')) return 'Sonnet 4.5';
-  if (model.includes('haiku')) return 'Haiku 4.5';
+  // Claude models — short labels derived from the central registry
+  // (includes legacy fallbacks like 'Opus 4.5' for unknown/older versions).
+  const claudeShort = getClaudeShortLabel(model);
+  if (claudeShort) return claudeShort;
 
   // Codex/GPT models - specific formatting
   if (model === 'codex-gpt-5.3-codex') return 'GPT-5.3 Codex';

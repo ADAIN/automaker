@@ -104,6 +104,23 @@ export {
   type ModelId,
 } from './model.js';
 
+// Claude model registry (single source of truth for native Anthropic models)
+export {
+  CLAUDE_MODEL_DEFS,
+  CLAUDE_CATALOG_MODELS,
+  CLAUDE_PICKER_MODELS,
+  getDefaultClaudeModelId,
+  findClaudeModelDef,
+  getClaudeModelLabel,
+  getClaudeShortLabel,
+  isClaudeAdaptiveThinkingModel,
+  getClaudeModelFamily,
+  type ClaudeModelDef,
+  type ClaudeModelFamily,
+  type ClaudeThinkingMode,
+  type ClaudeModelTier,
+} from './claude-models.js';
+
 // Event types
 export type { EventType, EventCallback } from './event.js';
 
