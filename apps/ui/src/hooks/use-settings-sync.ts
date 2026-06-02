@@ -92,6 +92,7 @@ const SETTINGS_FIELDS_TO_SYNC = [
   'disabledProviders',
   'autoLoadClaudeMd',
   'useClaudeCodeSystemPrompt',
+  'skipSandboxWarning',
   'keyboardShortcuts',
   'mcpServers',
   'defaultEditorCommand',

@@ -405,6 +405,17 @@ function RootLayoutContent() {
     }
   }, []);
 
+  // Auto-dismiss the sandbox dialog if the opt-out preference becomes true after
+  // the dialog was already shown. This happens when the FAST_HYDRATE background
+  // reconcile pulls the user's saved skipSandboxWarning from the server after the
+  // initial check already ran against a stale cache. Only ever dismisses — it
+  // never re-shows the dialog.
+  useEffect(() => {
+    if (skipSandboxWarning && sandboxStatus === 'needs-confirmation') {
+      setSandboxStatus('confirmed');
+    }
+  }, [skipSandboxWarning, sandboxStatus]);
+
   // Ref to prevent concurrent auth checks from running
   const authCheckRunning = useRef(false);
 
@@ -615,6 +626,24 @@ function RootLayoutContent() {
                       `[FAST_HYDRATE] Reconciling ntfyEndpoints from server (server=${serverEndpoints.length}, store=${currentEndpoints.length})`
                     );
                     useAppStore.setState({ ntfyEndpoints: serverEndpoints });
+                  }
+
+                  // Reconcile the sandbox warning preference from the server.
+                  // The FAST_HYDRATE path hydrates skipSandboxWarning from the
+                  // localStorage cache only; if that cache was stale or missing the
+                  // value, the live store would keep the default (false) and the
+                  // sandbox warning dialog would reappear even though the user already
+                  // opted out. Pulling the authoritative server value into the store
+                  // lets the dialog self-heal without forcing the user to opt out again.
+                  // Safe from the re-render flash this block guards against: it's a
+                  // boolean that gates a dialog, not rendered on the main view.
+                  const serverSkipSandbox =
+                    (finalSettings as GlobalSettings).skipSandboxWarning ?? false;
+                  if (serverSkipSandbox !== useAppStore.getState().skipSandboxWarning) {
+                    logger.info(
+                      `[FAST_HYDRATE] Reconciling skipSandboxWarning from server (server=${serverSkipSandbox})`
+                    );
+                    useAppStore.setState({ skipSandboxWarning: serverSkipSandbox });
                   }
                 } catch (e) {
                   logger.debug('[FAST_HYDRATE] Failed to update cache:', e);
