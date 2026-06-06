@@ -15,6 +15,7 @@ import {
   Sparkles,
   Cpu,
   RotateCcw,
+  GitCommit,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -36,6 +37,7 @@ interface FeatureDefaultsSectionProps {
   defaultPlanningMode: PlanningMode;
   defaultRequirePlanApproval: boolean;
   enableAiCommitMessages: boolean;
+  autoCommitOnVerified: boolean;
   defaultFeatureModel: PhaseModelEntry;
   defaultMaxTurns: number;
   onDefaultSkipTestsChange: (value: boolean) => void;
@@ -44,6 +46,7 @@ interface FeatureDefaultsSectionProps {
   onDefaultPlanningModeChange: (value: PlanningMode) => void;
   onDefaultRequirePlanApprovalChange: (value: boolean) => void;
   onEnableAiCommitMessagesChange: (value: boolean) => void;
+  onAutoCommitOnVerifiedChange: (value: boolean) => void;
   onDefaultFeatureModelChange: (value: PhaseModelEntry) => void;
   onDefaultMaxTurnsChange: (value: number) => void;
 }
@@ -55,6 +58,7 @@ export function FeatureDefaultsSection({
   defaultPlanningMode,
   defaultRequirePlanApproval,
   enableAiCommitMessages,
+  autoCommitOnVerified,
   defaultFeatureModel,
   defaultMaxTurns,
   onDefaultSkipTestsChange,
@@ -63,6 +67,7 @@ export function FeatureDefaultsSection({
   onDefaultPlanningModeChange,
   onDefaultRequirePlanApprovalChange,
   onEnableAiCommitMessagesChange,
+  onAutoCommitOnVerifiedChange,
   onDefaultFeatureModelChange,
   onDefaultMaxTurnsChange,
 }: FeatureDefaultsSectionProps) {
@@ -378,6 +383,35 @@ export function FeatureDefaultsSection({
               When enabled, opening the commit dialog will automatically generate a commit message
               using AI based on your staged or unstaged changes. You can configure the model used in
               Model Defaults.
+            </p>
+          </div>
+        </div>
+
+        {/* Separator */}
+        <div className="border-t border-border/30" />
+
+        {/* Auto-commit on Verified Setting */}
+        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+          <Checkbox
+            id="auto-commit-on-verified"
+            checked={autoCommitOnVerified}
+            onCheckedChange={(checked) => onAutoCommitOnVerifiedChange(checked === true)}
+            className="mt-1"
+            data-testid="auto-commit-on-verified-checkbox"
+          />
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="auto-commit-on-verified"
+              className="text-foreground cursor-pointer font-medium flex items-center gap-2"
+            >
+              <GitCommit className="w-4 h-4 text-brand-500" />
+              Auto-commit when verified
+            </Label>
+            <p className="text-xs text-muted-foreground/80 leading-relaxed">
+              When enabled, auto mode automatically commits the agent&apos;s changes as soon as a
+              feature reaches the Verified column. Commit messages are generated with AI when
+              &quot;Generate AI commit messages&quot; is on. Disable to leave changes uncommitted
+              for manual review.
             </p>
           </div>
         </div>

@@ -124,6 +124,49 @@ export async function getUseClaudeCodeSystemPromptSetting(
 }
 
 /**
+ * Get the autoCommitOnVerified setting, with project settings taking precedence over global.
+ * Falls back to global settings and defaults to true when unset.
+ * Returns true if settings service is not available.
+ *
+ * Controls whether auto-mode automatically commits the agent's changes when a
+ * feature reaches the 'verified' status. On failure, defaults to true so the
+ * user's work is preserved rather than silently left uncommitted.
+ *
+ * @param projectPath - Path to the project
+ * @param settingsService - Optional settings service instance
+ * @param logPrefix - Prefix for log messages (e.g., '[AutoMode]')
+ * @returns Promise resolving to the autoCommitOnVerified setting value
+ */
+export async function getAutoCommitOnVerifiedSetting(
+  projectPath: string,
+  settingsService?: SettingsService | null,
+  logPrefix = '[SettingsHelper]'
+): Promise<boolean> {
+  if (!settingsService) {
+    logger.info(
+      `${logPrefix} SettingsService not available, autoCommitOnVerified defaulting to true`
+    );
+    return true;
+  }
+
+  try {
+    // Check project settings first (takes precedence)
+    const projectSettings = await settingsService.getProjectSettings(projectPath);
+    if (projectSettings.autoCommitOnVerified !== undefined) {
+      return projectSettings.autoCommitOnVerified;
+    }
+
+    // Fall back to global settings
+    const globalSettings = await settingsService.getGlobalSettings();
+    return globalSettings.autoCommitOnVerified ?? true;
+  } catch (error) {
+    logger.error(`${logPrefix} Failed to load autoCommitOnVerified setting:`, error);
+    // Default to committing so the agent's work is not silently lost.
+    return true;
+  }
+}
+
+/**
  * Get the default max turns setting from global settings.
  *
  * Reads the user's configured `defaultMaxTurns` setting, which controls the maximum

@@ -31,8 +31,10 @@ import {
   resolveProviderContext,
   getMCPServersFromSettings,
   getDefaultMaxTurnsSetting,
+  getAutoCommitOnVerifiedSetting,
 } from '../../lib/settings-helpers.js';
 import { execGitCommand } from '@automaker/git-utils';
+import { generateCommitMessage } from '../commit-message-service.js';
 import { TypedEventBus } from '../typed-event-bus.js';
 import { ConcurrencyManager } from '../concurrency-manager.js';
 import { WorktreeResolver } from '../worktree-resolver.js';
@@ -381,6 +383,26 @@ export class AutoModeServiceFacade {
         );
       };
 
+    // updateFeatureStatus wrapper that auto-commits the agent's work when a feature
+    // transitions to 'verified' (gated by the autoCommitOnVerified setting). The commit
+    // runs BEFORE the status flips so a card only shows 'verified' once the work is saved.
+    // commitIfEnabled is a no-op when disabled or the tree is clean and never throws,
+    // so the status update below always proceeds.
+    const updateFeatureStatusWithAutoCommit = async (
+      pPath: string,
+      featureId: string,
+      status: string
+    ): Promise<void> => {
+      if (status === 'verified') {
+        await getFacade().commitIfEnabled(featureId);
+      }
+      return featureStateManager.updateFeatureStatus(pPath, featureId, status);
+    };
+
+    // Commit callback used by the pipeline before merging so the merge carries the work.
+    const commitOnVerifiedFn = (pPath: string, featureId: string, worktreePath?: string) =>
+      getFacade().commitIfEnabled(featureId, worktreePath);
+
     // PipelineOrchestrator - runAgentFn delegates to AgentExecutor via shared helper
     const pipelineOrchestrator = new PipelineOrchestrator(
       eventBus,
@@ -391,13 +413,13 @@ export class AutoModeServiceFacade {
       concurrencyManager,
       settingsService,
       // Callbacks
-      (pPath, featureId, status) =>
-        featureStateManager.updateFeatureStatus(pPath, featureId, status),
+      updateFeatureStatusWithAutoCommit,
       loadContextFiles,
       buildFeaturePrompt,
       (pPath, featureId, useWorktrees, _isAutoMode, _model, opts) =>
         getFacade().executeFeature(featureId, useWorktrees, false, undefined, opts),
-      createRunAgentFn()
+      createRunAgentFn(),
+      commitOnVerifiedFn
     );
 
     // AutoLoopCoordinator - ALWAYS create new with proper execution callbacks
@@ -460,8 +482,7 @@ export class AutoModeServiceFacade {
       settingsService,
       createRunAgentFn(),
       (context) => pipelineOrchestrator.executePipeline(context),
-      (pPath, featureId, status) =>
-        featureStateManager.updateFeatureStatus(pPath, featureId, status),
+      updateFeatureStatusWithAutoCommit,
       (pPath, featureId) => featureStateManager.loadFeature(pPath, featureId),
       async (feature) => {
         // getPlanningPromptPrefixFn - select appropriate planning prompt based on feature's planningMode
@@ -841,8 +862,19 @@ export class AutoModeServiceFacade {
    * Commit feature changes
    * @param featureId - The feature ID to commit
    * @param providedWorktreePath - Optional worktree path
+   * @param options - Commit behavior options
+   * @param options.useAiMessage - Generate the commit message via AI (falls back to `feat: <title>`)
+   * @param options.emitCompletionEvent - Emit an `auto_mode_feature_complete` event (default true).
+   *   Set false when committing as part of a larger auto-mode flow (e.g. verified transition)
+   *   to avoid emitting a duplicate completion event — a lighter progress event is emitted instead.
+   * @returns The new commit hash, or null if there was nothing to commit / the commit failed
    */
-  async commitFeature(featureId: string, providedWorktreePath?: string): Promise<string | null> {
+  async commitFeature(
+    featureId: string,
+    providedWorktreePath?: string,
+    options?: { useAiMessage?: boolean; emitCompletionEvent?: boolean }
+  ): Promise<string | null> {
+    const emitCompletionEvent = options?.emitCompletionEvent ?? true;
     let workDir = this.projectPath;
 
     if (providedWorktreePath) {
@@ -874,30 +906,114 @@ export class AutoModeServiceFacade {
       }
 
       const feature = await this.featureStateManager.loadFeature(this.projectPath, featureId);
-      const title =
-        feature?.description?.split('\n')[0]?.substring(0, 60) || `Feature ${featureId}`;
-      const commitMessage = `feat: ${title}\n\nImplemented by Automaker auto-mode`;
+      // Build the message BEFORE staging so AI generation can read the working-tree diff.
+      const commitMessage = await this.buildCommitMessage(
+        featureId,
+        feature,
+        workDir,
+        options?.useAiMessage ?? false
+      );
 
       await execGitCommand(['add', '-A'], workDir);
       await execGitCommand(['commit', '-m', commitMessage], workDir);
       const hash = await execGitCommand(['rev-parse', 'HEAD'], workDir);
+      const shortHash = hash.trim().substring(0, 8);
 
       const runningEntryForCommit = this.concurrencyManager.getRunningFeature(featureId);
       if (runningEntryForCommit?.isAutoMode) {
-        this.eventBus.emitAutoModeEvent('auto_mode_feature_complete', {
-          featureId,
-          featureName: feature?.title,
-          branchName: feature?.branchName ?? null,
-          executionMode: 'auto',
-          passes: true,
-          message: `Changes committed: ${hash.trim().substring(0, 8)}`,
-          projectPath: this.projectPath,
-        });
+        if (emitCompletionEvent) {
+          this.eventBus.emitAutoModeEvent('auto_mode_feature_complete', {
+            featureId,
+            featureName: feature?.title,
+            branchName: feature?.branchName ?? null,
+            executionMode: 'auto',
+            passes: true,
+            message: `Changes committed: ${shortHash}`,
+            projectPath: this.projectPath,
+          });
+        } else {
+          // Lighter progress event — the surrounding flow emits its own completion event.
+          this.eventBus.emitAutoModeEvent('auto_mode_progress', {
+            featureId,
+            branchName: feature?.branchName ?? null,
+            content: `Committed changes: ${shortHash}`,
+            projectPath: this.projectPath,
+          });
+        }
       }
 
       return hash.trim();
     } catch (error) {
       logger.error(`Commit failed for ${featureId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Build the commit message for a feature. Uses AI generation when requested,
+   * falling back to a conventional `feat: <title>` message when AI is disabled,
+   * fails, or returns nothing.
+   */
+  private async buildCommitMessage(
+    featureId: string,
+    feature: Feature | null,
+    workDir: string,
+    useAiMessage: boolean
+  ): Promise<string> {
+    const title = feature?.description?.split('\n')[0]?.substring(0, 60) || `Feature ${featureId}`;
+    const fallback = `feat: ${title}\n\nImplemented by Automaker auto-mode`;
+
+    if (!useAiMessage) {
+      return fallback;
+    }
+
+    try {
+      const aiMessage = await generateCommitMessage(workDir, this.settingsService, {
+        projectPath: this.projectPath,
+      });
+      if (aiMessage) {
+        return aiMessage;
+      }
+      logger.warn(`[commitFeature] AI commit message was empty for ${featureId}; using fallback`);
+    } catch (error) {
+      logger.warn(
+        `[commitFeature] AI commit message generation failed for ${featureId}; using fallback:`,
+        error
+      );
+    }
+    return fallback;
+  }
+
+  /**
+   * Commit the agent's changes for a feature when the autoCommitOnVerified setting is enabled.
+   *
+   * Used by the auto-mode completion flow (the verified-status transition and the
+   * pre-merge step). Respects the project/global `autoCommitOnVerified` setting and the
+   * `enableAiCommitMessages` setting for message style. Never throws — commit failures
+   * are logged and result in a no-op so the surrounding status update still proceeds.
+   *
+   * @param featureId - The feature ID to commit
+   * @param providedWorktreePath - Optional worktree path (otherwise derived from branchName)
+   * @returns The new commit hash, or null if disabled / nothing to commit / commit failed
+   */
+  async commitIfEnabled(featureId: string, providedWorktreePath?: string): Promise<string | null> {
+    try {
+      const enabled = await getAutoCommitOnVerifiedSetting(
+        this.projectPath,
+        this.settingsService,
+        '[AutoMode]'
+      );
+      if (!enabled) {
+        return null;
+      }
+      const globalSettings = await this.settingsService?.getGlobalSettings();
+      const useAiMessage = globalSettings?.enableAiCommitMessages ?? true;
+      return await this.commitFeature(featureId, providedWorktreePath, {
+        useAiMessage,
+        emitCompletionEvent: false,
+      });
+    } catch (error) {
+      logger.warn(`[commitIfEnabled] Auto-commit failed for ${featureId}:`, error);
       return null;
     }
   }

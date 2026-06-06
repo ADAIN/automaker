@@ -224,6 +224,7 @@ export function parseLocalStorageSettings(): Partial<GlobalSettings> | null {
         (state.claudeCompatibleProviders as GlobalSettings['claudeCompatibleProviders']) ?? [],
       // Settings that were previously missing from migration (added for sync parity)
       enableAiCommitMessages: state.enableAiCommitMessages as boolean | undefined,
+      autoCommitOnVerified: state.autoCommitOnVerified as boolean | undefined,
       enableSkills: state.enableSkills as boolean | undefined,
       skillsSources: state.skillsSources as GlobalSettings['skillsSources'] | undefined,
       enableSubagents: state.enableSubagents as boolean | undefined,
@@ -394,6 +395,9 @@ export function mergeSettings(
   // Use nullish coalescing to accept stored falsy values (e.g. false)
   if (localSettings.enableAiCommitMessages != null && merged.enableAiCommitMessages == null) {
     merged.enableAiCommitMessages = localSettings.enableAiCommitMessages;
+  }
+  if (localSettings.autoCommitOnVerified != null && merged.autoCommitOnVerified == null) {
+    merged.autoCommitOnVerified = localSettings.autoCommitOnVerified;
   }
   if (localSettings.enableSkills != null && merged.enableSkills == null) {
     merged.enableSkills = localSettings.enableSkills;
@@ -792,6 +796,7 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     knownDynamicModelIds: sanitizedKnownDynamicModelIds,
     disabledProviders: settings.disabledProviders ?? [],
     enableAiCommitMessages: settings.enableAiCommitMessages ?? true,
+    autoCommitOnVerified: settings.autoCommitOnVerified ?? true,
     enableSkills: settings.enableSkills ?? true,
     skillsSources: settings.skillsSources ?? ['user', 'project'],
     enableSubagents: settings.enableSubagents ?? true,
@@ -929,6 +934,7 @@ function buildSettingsUpdateFromStore(): Record<string, unknown> {
     knownDynamicModelIds: state.knownDynamicModelIds,
     disabledProviders: state.disabledProviders,
     enableAiCommitMessages: state.enableAiCommitMessages,
+    autoCommitOnVerified: state.autoCommitOnVerified,
     enableSkills: state.enableSkills,
     skillsSources: state.skillsSources,
     enableSubagents: state.enableSubagents,

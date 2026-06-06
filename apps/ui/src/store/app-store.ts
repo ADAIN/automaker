@@ -302,6 +302,7 @@ const initialState: AppState = {
   enableDependencyBlocking: true,
   skipVerificationInAutoMode: false,
   enableAiCommitMessages: true,
+  autoCommitOnVerified: true,
   mergePostAction: null,
   planUseSelectedWorktreeBranch: true,
   addFeatureUseSelectedWorktreeBranch: false,
@@ -1167,6 +1168,16 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       await httpApi.settings.updateGlobal({ enableAiCommitMessages: enabled });
     } catch (error) {
       logger.error('Failed to sync enableAiCommitMessages:', error);
+    }
+  },
+  setAutoCommitOnVerified: async (enabled) => {
+    set({ autoCommitOnVerified: enabled });
+    // Sync to server
+    try {
+      const httpApi = getHttpApiClient();
+      await httpApi.settings.updateGlobal({ autoCommitOnVerified: enabled });
+    } catch (error) {
+      logger.error('Failed to sync autoCommitOnVerified:', error);
     }
   },
   setMergePostAction: async (action) => {

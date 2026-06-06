@@ -47,6 +47,17 @@ export type UpdateFeatureStatusFn = (
   status: string
 ) => Promise<void>;
 
+/**
+ * Commit the agent's changes for a feature when auto-commit is enabled.
+ * Returns the new commit hash, or null when disabled / nothing to commit / failed.
+ * Implementations must never throw.
+ */
+export type CommitOnVerifiedFn = (
+  projectPath: string,
+  featureId: string,
+  worktreePath?: string
+) => Promise<string | null>;
+
 export type BuildFeaturePromptFn = (
   feature: Feature,
   prompts: { implementationInstructions: string; playwrightVerificationInstructions: string }

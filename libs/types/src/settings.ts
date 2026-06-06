@@ -1275,6 +1275,8 @@ export interface GlobalSettings {
   skipVerificationInAutoMode: boolean;
   /** User's preferred action after a clean merge (null = ask every time) */
   mergePostAction: 'commit' | 'manual' | null;
+  /** Auto-commit the agent's changes when a feature reaches 'verified' in auto mode (default: true) */
+  autoCommitOnVerified: boolean;
   /** Default: use git worktrees for feature branches */
   useWorktrees: boolean;
   /** Default: planning approach (skip/lite/spec/full) */
@@ -1702,6 +1704,8 @@ export interface ProjectSettings {
   automodeEnabled?: boolean;
   /** Maximum concurrent agents for this project (overrides global maxConcurrency) */
   maxConcurrentAgents?: number;
+  /** Auto-commit changes when a feature reaches 'verified' (project override of global autoCommitOnVerified) */
+  autoCommitOnVerified?: boolean;
 
   // Test Runner Configuration
   /**
@@ -1867,6 +1871,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   enableDependencyBlocking: true,
   skipVerificationInAutoMode: false,
   mergePostAction: null,
+  autoCommitOnVerified: true,
   useWorktrees: true,
   defaultPlanningMode: 'skip',
   defaultRequirePlanApproval: false,

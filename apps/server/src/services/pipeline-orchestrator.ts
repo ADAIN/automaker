@@ -35,6 +35,7 @@ import type {
   StepResult,
   MergeResult,
   UpdateFeatureStatusFn,
+  CommitOnVerifiedFn,
   BuildFeaturePromptFn,
   ExecuteFeatureFn,
   RunAgentFn,
@@ -47,6 +48,7 @@ export type {
   StepResult,
   MergeResult,
   UpdateFeatureStatusFn,
+  CommitOnVerifiedFn,
   BuildFeaturePromptFn,
   ExecuteFeatureFn,
   RunAgentFn,
@@ -67,7 +69,9 @@ export class PipelineOrchestrator {
     private loadContextFilesFn: typeof loadContextFiles,
     private buildFeaturePromptFn: BuildFeaturePromptFn,
     private executeFeatureFn: ExecuteFeatureFn,
-    private runAgentFn: RunAgentFn
+    private runAgentFn: RunAgentFn,
+    /** Optional: commit the agent's work before merging so the merge carries it. */
+    private commitOnVerifiedFn?: CommitOnVerifiedFn
   ) {}
 
   async executePipeline(ctx: PipelineContext): Promise<void> {
@@ -153,6 +157,12 @@ export class PipelineOrchestrator {
       });
     }
     if (ctx.branchName) {
+      // Commit the agent + pipeline-step changes before merging so the merge actually
+      // carries the work (git merge only moves committed history). No-op when auto-commit
+      // is disabled or the working tree is clean, and never throws.
+      if (this.commitOnVerifiedFn) {
+        await this.commitOnVerifiedFn(ctx.projectPath, ctx.featureId, ctx.workDir);
+      }
       const mergeResult = await this.attemptMerge(ctx);
       if (!mergeResult.success && mergeResult.hasConflicts) return;
     }

@@ -49,6 +49,8 @@ export function SettingsView() {
     setSkipVerificationInAutoMode,
     enableAiCommitMessages,
     setEnableAiCommitMessages,
+    autoCommitOnVerified,
+    setAutoCommitOnVerified,
     useWorktrees,
     setUseWorktrees,
     muteDoneSound,
@@ -190,6 +192,7 @@ export function SettingsView() {
             defaultPlanningMode={defaultPlanningMode}
             defaultRequirePlanApproval={defaultRequirePlanApproval}
             enableAiCommitMessages={enableAiCommitMessages}
+            autoCommitOnVerified={autoCommitOnVerified}
             defaultFeatureModel={defaultFeatureModel}
             defaultMaxTurns={defaultMaxTurns}
             onDefaultSkipTestsChange={setDefaultSkipTests}
@@ -198,6 +201,7 @@ export function SettingsView() {
             onDefaultPlanningModeChange={setDefaultPlanningMode}
             onDefaultRequirePlanApprovalChange={setDefaultRequirePlanApproval}
             onEnableAiCommitMessagesChange={setEnableAiCommitMessages}
+            onAutoCommitOnVerifiedChange={setAutoCommitOnVerified}
             onDefaultFeatureModelChange={setDefaultFeatureModel}
             onDefaultMaxTurnsChange={setDefaultMaxTurns}
           />
